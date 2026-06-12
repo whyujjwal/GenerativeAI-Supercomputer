@@ -18,6 +18,7 @@ import {
     uninstallSkill,
 } from '../lib/agent/marketplace.js';
 import { t } from '../lib/i18n.js';
+import { t2iModels, t2vModels } from '../lib/models.js';
 
 function isVideoUrl(url) {
     return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
@@ -64,6 +65,17 @@ export function SupercomputerStudio() {
     container.appendChild(hero);
 
     const BRAIN_STORAGE_KEY = 'supercomputer_brain';
+    const IMAGE_MODEL_KEY = 'sc_image_model';
+    const VIDEO_MODEL_KEY = 'sc_video_model';
+
+    const getLlmModelKey = (providerId) => `sc_model_${providerId}`;
+
+    const getStoredLlmModel = (providerId = getSelectedBrain()) =>
+        localStorage.getItem(getLlmModelKey(providerId)) || '';
+
+    const getStoredImageModel = () => localStorage.getItem(IMAGE_MODEL_KEY) || '';
+
+    const getStoredVideoModel = () => localStorage.getItem(VIDEO_MODEL_KEY) || '';
 
     const getSelectedBrain = () => {
         const stored = localStorage.getItem(BRAIN_STORAGE_KEY);
@@ -916,6 +928,165 @@ export function SupercomputerStudio() {
         await renderScheduleList();
     };
 
+    const renderSettingsPanel = (content) => {
+        const settingsProvider = selectedBrain;
+        const providerMeta = getProviderMeta(settingsProvider);
+        const storedModel = getStoredLlmModel(settingsProvider);
+        const storedKey = localStorage.getItem(providerMeta.keyStorageKey) || '';
+        const storedImage = getStoredImageModel();
+        const storedVideo = getStoredVideoModel();
+
+        const imageSelectValue =
+            storedImage && t2iModels.some((m) => m.id === storedImage) ? storedImage : '';
+        const imageCustomValue =
+            storedImage && !t2iModels.some((m) => m.id === storedImage) ? storedImage : '';
+
+        const videoSelectValue =
+            storedVideo && t2vModels.some((m) => m.id === storedVideo) ? storedVideo : '';
+        const videoCustomValue =
+            storedVideo && !t2vModels.some((m) => m.id === storedVideo) ? storedVideo : '';
+
+        content.innerHTML = `
+            <p class="text-[11px] text-muted leading-relaxed">
+                Choose your LLM provider and model, API keys, and preferred image/video models for agent runs.
+            </p>
+            <div class="bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-3">
+                <p class="text-[10px] font-bold text-accent uppercase tracking-wider">LLM</p>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest">Provider</label>
+                    <select id="settings-provider"
+                        class="bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-accent/50 cursor-pointer">
+                        ${PROVIDERS.map((p) => `<option value="${p.id}" ${p.id === settingsProvider ? 'selected' : ''}>${escapeHtml(p.label)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest">Model</label>
+                    <input type="text" id="settings-llm-model" list="settings-llm-models"
+                        placeholder="${escapeHtml(providerMeta.defaultModel)}"
+                        value="${escapeHtml(storedModel)}"
+                        class="w-full bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
+                    <datalist id="settings-llm-models">
+                        ${providerMeta.knownModels.map((m) => `<option value="${escapeHtml(m)}">`).join('')}
+                    </datalist>
+                    <p class="text-[10px] text-muted">Suggestions only — any model id is allowed.</p>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest">API key</label>
+                    <input type="password" id="settings-api-key"
+                        placeholder="${escapeHtml(KEY_BANNER_COPY[providerMeta.id]?.placeholder || 'API key…')}"
+                        value="${escapeHtml(storedKey)}"
+                        class="w-full bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
+                </div>
+            </div>
+            <div class="bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-3">
+                <p class="text-[10px] font-bold text-accent uppercase tracking-wider">Image model</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <select id="settings-image-select"
+                        class="flex-1 bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm focus:outline-none focus:border-accent/50 cursor-pointer">
+                        <option value="">Auto (agent picks)</option>
+                        ${t2iModels.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === imageSelectValue ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                    <input type="text" id="settings-image-custom"
+                        placeholder="Custom model id"
+                        value="${escapeHtml(imageCustomValue)}"
+                        class="flex-1 bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
+                </div>
+            </div>
+            <div class="bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-3">
+                <p class="text-[10px] font-bold text-accent uppercase tracking-wider">Video model</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <select id="settings-video-select"
+                        class="flex-1 bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm focus:outline-none focus:border-accent/50 cursor-pointer">
+                        <option value="">Auto (agent picks)</option>
+                        ${t2vModels.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === videoSelectValue ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                    <input type="text" id="settings-video-custom"
+                        placeholder="Custom model id"
+                        value="${escapeHtml(videoCustomValue)}"
+                        class="flex-1 bg-surface border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
+                </div>
+            </div>
+        `;
+
+        const providerSelect = content.querySelector('#settings-provider');
+        const llmModelInput = content.querySelector('#settings-llm-model');
+        const apiKeyInput = content.querySelector('#settings-api-key');
+        const imageSelect = content.querySelector('#settings-image-select');
+        const imageCustom = content.querySelector('#settings-image-custom');
+        const videoSelect = content.querySelector('#settings-video-select');
+        const videoCustom = content.querySelector('#settings-video-custom');
+
+        const persistLlmModel = () => {
+            const providerId = providerSelect.value;
+            const model = llmModelInput.value.trim();
+            if (model) {
+                localStorage.setItem(getLlmModelKey(providerId), model);
+            } else {
+                localStorage.removeItem(getLlmModelKey(providerId));
+            }
+        };
+
+        const persistImageModel = () => {
+            const custom = imageCustom.value.trim();
+            const selected = imageSelect.value;
+            const value = custom || selected || '';
+            if (value) {
+                localStorage.setItem(IMAGE_MODEL_KEY, value);
+            } else {
+                localStorage.removeItem(IMAGE_MODEL_KEY);
+            }
+        };
+
+        const persistVideoModel = () => {
+            const custom = videoCustom.value.trim();
+            const selected = videoSelect.value;
+            const value = custom || selected || '';
+            if (value) {
+                localStorage.setItem(VIDEO_MODEL_KEY, value);
+            } else {
+                localStorage.removeItem(VIDEO_MODEL_KEY);
+            }
+        };
+
+        providerSelect.onchange = () => {
+            persistLlmModel();
+            selectedBrain = providerSelect.value;
+            localStorage.setItem(BRAIN_STORAGE_KEY, selectedBrain);
+            brainSelect.value = selectedBrain;
+            renderKeyBanner();
+            renderSettingsPanel(content);
+        };
+
+        llmModelInput.onchange = persistLlmModel;
+        llmModelInput.onblur = persistLlmModel;
+
+        apiKeyInput.onchange = () => {
+            const key = apiKeyInput.value.trim();
+            const meta = getProviderMeta(providerSelect.value);
+            if (key) {
+                localStorage.setItem(meta.keyStorageKey, key);
+            } else {
+                localStorage.removeItem(meta.keyStorageKey);
+            }
+            renderKeyBanner();
+        };
+        apiKeyInput.onblur = apiKeyInput.onchange;
+
+        imageSelect.onchange = () => {
+            if (imageSelect.value) imageCustom.value = '';
+            persistImageModel();
+        };
+        imageCustom.onchange = persistImageModel;
+        imageCustom.onblur = persistImageModel;
+
+        videoSelect.onchange = () => {
+            if (videoSelect.value) videoCustom.value = '';
+            persistVideoModel();
+        };
+        videoCustom.onchange = persistVideoModel;
+        videoCustom.onblur = persistVideoModel;
+    };
+
     const renderConnectorsPanel = (content) => {
         const backendUrl = backendClient.getBackendUrl();
         const reachabilityNote = backendClient.isConfigured()
@@ -1034,6 +1205,10 @@ export function SupercomputerStudio() {
                     class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'schedules' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
                     Schedules
                 </button>
+                <button type="button" data-tab="settings"
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'settings' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
+                    Settings
+                </button>
             </div>
             <div id="marketplace-content" class="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-3"></div>
         `;
@@ -1055,6 +1230,8 @@ export function SupercomputerStudio() {
             renderConnectorsPanel(content);
         } else if (marketplaceTab === 'schedules') {
             renderSchedulesPanel(content);
+        } else if (marketplaceTab === 'settings') {
+            renderSettingsPanel(content);
         } else if (marketplaceTab === 'personas') {
             listMarketplacePersonas().forEach((persona) => {
                 const card = document.createElement('div');
@@ -1184,9 +1361,20 @@ export function SupercomputerStudio() {
         setRunning(true);
 
         try {
-            const provider = createProvider(selectedBrain);
+            const chosenModel = getStoredLlmModel(selectedBrain).trim();
+            const provider = createProvider(selectedBrain, {
+                model: chosenModel || undefined,
+            });
             const registry = buildMergedRegistry();
             memory.setWorking({ ...memory.getWorking(), brain: selectedBrain });
+
+            const imageModel = getStoredImageModel().trim();
+            const videoModel = getStoredVideoModel().trim();
+            /** @type {{ image?: string, video?: string }} */
+            const modelPrefs = {};
+            if (imageModel) modelPrefs.image = imageModel;
+            if (videoModel) modelPrefs.video = videoModel;
+
             const agent = new Agent({
                 provider,
                 registry,
@@ -1194,6 +1382,7 @@ export function SupercomputerStudio() {
                 skills: loadSkills(),
                 persona: activePersona,
                 onEvent: handleEvent,
+                modelPrefs: Object.keys(modelPrefs).length ? modelPrefs : undefined,
                 confirmPlan: (plan) =>
                     new Promise((resolve) => {
                         confirmPlanResolver = resolve;

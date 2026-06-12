@@ -34,9 +34,9 @@ Rules:
  */
 export class Agent {
   /**
-   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean>, memory?: import('./memory.js').MemoryStore, skills?: Array<Object>, persona?: Object|null }} options
+   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean>, memory?: import('./memory.js').MemoryStore, skills?: Array<Object>, persona?: Object|null, modelPrefs?: { image?: string, video?: string } }} options
    */
-  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan, memory, skills, persona }) {
+  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan, memory, skills, persona, modelPrefs }) {
     this.provider = provider;
     this.registry = registry;
     this.onEvent = onEvent || (() => {});
@@ -45,6 +45,7 @@ export class Agent {
     this.memory = memory || null;
     this.skills = skills || null;
     this.persona = persona || null;
+    this.modelPrefs = modelPrefs || null;
   }
 
   /**
@@ -81,6 +82,13 @@ export class Agent {
 
     const parts = [personaContext, skillGuidance, system].filter(Boolean);
     system = parts.join('\n\n');
+
+    if (this.modelPrefs?.image || this.modelPrefs?.video) {
+      const prefParts = [];
+      if (this.modelPrefs.image) prefParts.push(`image: ${this.modelPrefs.image}`);
+      if (this.modelPrefs.video) prefParts.push(`video: ${this.modelPrefs.video}`);
+      system += `\n\nPreferred models — ${prefParts.join(', ')}. Use these unless the user explicitly asks for a different model.`;
+    }
 
     if (this.memory) {
       system += this.memory.buildMemoryContext();

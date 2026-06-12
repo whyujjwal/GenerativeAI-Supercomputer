@@ -466,25 +466,28 @@ export class GeminiProvider extends LLMProvider {
   }
 }
 
-/** @type {Array<{ id: string, label: string, keyStorageKey: string, defaultModel: string }>} */
+/** @type {Array<{ id: string, label: string, keyStorageKey: string, defaultModel: string, knownModels: string[] }>} */
 export const PROVIDERS = [
   {
     id: 'claude',
     label: 'Claude',
     keyStorageKey: 'anthropic_key',
     defaultModel: 'claude-opus-4-8',
+    knownModels: ['claude-opus-4-8', 'claude-sonnet-4-6'],
   },
   {
     id: 'openai',
     label: 'OpenAI',
     keyStorageKey: 'openai_key',
     defaultModel: 'gpt-5.2',
+    knownModels: ['gpt-5.2', 'gpt-5.2-mini'],
   },
   {
     id: 'gemini',
     label: 'Gemini',
     keyStorageKey: 'gemini_key',
     defaultModel: 'gemini-3.1-pro',
+    knownModels: ['gemini-3.1-pro', 'gemini-2.5-flash'],
   },
 ];
 
