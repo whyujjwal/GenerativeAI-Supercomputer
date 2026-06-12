@@ -10,7 +10,11 @@ function navigate(page) {
   if (!contentArea) return;
   contentArea.innerHTML = '';
 
-  if (page === 'image') {
+  if (page === 'supercomputer') {
+    import('./components/SupercomputerStudio.js').then(({ SupercomputerStudio }) => {
+      contentArea.appendChild(SupercomputerStudio());
+    });
+  } else if (page === 'image') {
     contentArea.appendChild(ImageStudio());
   } else if (page === 'video') {
     import('./components/VideoStudio.js').then(({ VideoStudio }) => {
@@ -49,7 +53,7 @@ contentArea.className = 'flex-1 relative w-full overflow-hidden flex flex-col bg
 app.appendChild(contentArea);
 
 // Initial Route
-navigate('image');
+navigate('supercomputer');
 
 // Event Listener for Navigation
 window.addEventListener('navigate', (e) => {

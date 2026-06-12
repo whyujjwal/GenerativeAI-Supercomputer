@@ -12,6 +12,7 @@ export function setLang(lang) {
 const translations = {
     en: {
         // Navigation
+        'nav.supercomputer': 'Supercomputer',
         'nav.image': 'Image',
         'nav.video': 'Video',
         'nav.lipsync': 'Lip Sync',
@@ -202,6 +203,7 @@ const translations = {
     },
     zh: {
         // Navigation
+        'nav.supercomputer': 'Supercomputer',
         'nav.image': '图像',
         'nav.video': '视频',
         'nav.lipsync': '唇语同步',
