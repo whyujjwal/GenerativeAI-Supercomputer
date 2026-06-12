@@ -28,6 +28,12 @@ const config = {
   tokenEncKey: readEnv('TOKEN_ENC_KEY'),
   isDev: process.env.NODE_ENV !== 'production',
   sessionSecret: readEnv('SESSION_SECRET') ?? readEnv('TOKEN_ENC_KEY') ?? 'dev-session-secret-change-me',
+  muapiKey: readEnv('MUAPI_KEY'),
+  agentKeys: {
+    anthropic: readEnv('ANTHROPIC_KEY'),
+    openai: readEnv('OPENAI_KEY'),
+    gemini: readEnv('GEMINI_KEY'),
+  },
   providers: {
     slack: providerConfig('SLACK'),
     google: providerConfig('GOOGLE'),

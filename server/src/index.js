@@ -4,6 +4,8 @@ import express from 'express';
 import config from './config.js';
 import connectorsRouter from './connectors/index.js';
 import oauthRouter from './oauth/index.js';
+import schedulesRouter from './schedules/index.js';
+import { startScheduler } from './schedules/scheduler.js';
 
 const app = express();
 
@@ -47,6 +49,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/oauth', oauthRouter);
 app.use('/api/connectors', connectorsRouter);
+app.use('/api/schedules', schedulesRouter);
 
 app.use((err, _req, res, next) => {
   if (!err) {
@@ -62,4 +65,5 @@ app.use((err, _req, res, next) => {
 
 app.listen(config.port, () => {
   console.log(`Connector server listening on http://localhost:${config.port}`);
+  startScheduler();
 });
