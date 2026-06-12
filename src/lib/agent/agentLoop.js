@@ -1,3 +1,5 @@
+import { findSkillInBrief, listSkillsForPrompt } from './skills.js';
+
 const DEFAULT_MAX_ITERATIONS = 16;
 
 /**
@@ -31,14 +33,16 @@ Rules:
  */
 export class Agent {
   /**
-   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean> }} options
+   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean>, memory?: import('./memory.js').MemoryStore, skills?: Array<Object> }} options
    */
-  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan }) {
+  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan, memory, skills }) {
     this.provider = provider;
     this.registry = registry;
     this.onEvent = onEvent || (() => {});
     this.maxIterations = maxIterations;
     this.confirmPlan = confirmPlan;
+    this.memory = memory || null;
+    this.skills = skills || null;
   }
 
   /**
@@ -53,11 +57,41 @@ export class Agent {
    * @returns {Promise<{ text: string|null, messages: import('./llmProvider.js').NormalizedMessage[] }>}
    */
   async run(brief) {
-    const system = buildSystemPrompt(this.registry.definitions);
+    let effectiveBrief = brief;
+    let system = buildSystemPrompt(this.registry.definitions);
+
+    if (this.skills) {
+      const skillLines = listSkillsForPrompt();
+      if (skillLines) {
+        system += `\n\nAvailable skills (user may invoke with /trigger prefix):\n${skillLines}`;
+      }
+      const match = findSkillInBrief(brief);
+      if (match) {
+        system = `${match.skill.guidance}\n\n${system}`;
+        effectiveBrief = match.rest || brief;
+      }
+    }
+
+    if (this.memory) {
+      system += this.memory.buildMemoryContext();
+      const existing = this.memory.getWorking();
+      this.memory.setWorking({
+        brief: effectiveBrief,
+        lastPlan: existing?.lastPlan,
+        generatedAssets: [],
+        brain: existing?.brain,
+      });
+    }
+
     /** @type {import('./llmProvider.js').NormalizedMessage[]} */
-    const messages = [{ role: 'user', content: brief }];
+    const messages = [{ role: 'user', content: effectiveBrief }];
     let lastText = null;
     let planConfirmed = false;
+    let cancelled = false;
+    /** @type {Array<{ tool: string, model?: string, args?: Object }>} */
+    const episodeSteps = [];
+    /** @type {string[]} */
+    const episodeAssets = [];
 
     for (let iteration = 0; iteration < this.maxIterations; iteration += 1) {
       let result;
@@ -83,6 +117,16 @@ export class Agent {
           this._emit({ type: 'assistant', text });
         }
         this._emit({ type: 'done', text: text || lastText });
+        if (this.memory && !cancelled) {
+          const working = this.memory.getWorking();
+          this.memory.addEpisode({
+            brief: effectiveBrief,
+            brain: working?.brain,
+            steps: episodeSteps,
+            assets: episodeAssets,
+          });
+          this.memory.clearWorking();
+        }
         return { text: text || lastText, messages };
       }
 
@@ -90,7 +134,11 @@ export class Agent {
         const approved = await this.confirmPlan({ text: text || '', toolCalls });
         planConfirmed = true;
         if (!approved) {
+          cancelled = true;
           this._emit({ type: 'cancelled' });
+          if (this.memory) {
+            this.memory.clearWorking();
+          }
           return { text: text || lastText, messages };
         }
       } else {
@@ -104,6 +152,10 @@ export class Agent {
 
       if (text) {
         this._emit({ type: 'assistant', text });
+        if (this.memory) {
+          const working = this.memory.getWorking() || {};
+          this.memory.setWorking({ ...working, brief: effectiveBrief, lastPlan: text });
+        }
       }
 
       messages.push({
@@ -140,6 +192,24 @@ export class Agent {
           result: toolResult,
         });
 
+        episodeSteps.push({
+          tool: tc.name,
+          model: tc.args?.model,
+          args: tc.args,
+        });
+        if (toolResult?.ok && toolResult.url) {
+          episodeAssets.push(toolResult.url);
+          if (this.memory) {
+            const working = this.memory.getWorking() || {};
+            const generatedAssets = [...(working.generatedAssets || [])];
+            generatedAssets.push({
+              kind: tc.name,
+              url: toolResult.url,
+            });
+            this.memory.setWorking({ ...working, brief: effectiveBrief, generatedAssets });
+          }
+        }
+
         messages.push({
           role: 'tool',
           toolCallId: tc.id,
@@ -151,6 +221,16 @@ export class Agent {
     const message = `Agent loop stopped after ${this.maxIterations} iterations`;
     this._emit({ type: 'error', message });
     this._emit({ type: 'done', text: lastText });
+    if (this.memory && !cancelled) {
+      const working = this.memory.getWorking();
+      this.memory.addEpisode({
+        brief: effectiveBrief,
+        brain: working?.brain,
+        steps: episodeSteps,
+        assets: episodeAssets,
+      });
+      this.memory.clearWorking();
+    }
     return { text: lastText, messages };
   }
 }

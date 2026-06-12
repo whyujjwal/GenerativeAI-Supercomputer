@@ -1,6 +1,8 @@
 import { createProvider, PROVIDERS } from '../lib/agent/llmProvider.js';
 import { buildToolRegistry } from '../lib/agent/tools.js';
 import { Agent } from '../lib/agent/agentLoop.js';
+import { MemoryStore } from '../lib/agent/memory.js';
+import { loadSkills } from '../lib/agent/skills.js';
 import { t } from '../lib/i18n.js';
 
 function isVideoUrl(url) {
@@ -59,6 +61,87 @@ export function SupercomputerStudio() {
         PROVIDERS.find((p) => p.id === brainId) || PROVIDERS[0];
 
     let selectedBrain = getSelectedBrain();
+
+    const memory = new MemoryStore();
+    const skills = loadSkills();
+
+    // --- Brand panel ---
+    const brandPanelWrap = document.createElement('div');
+    brandPanelWrap.className = 'shrink-0 mx-4 mb-3 max-w-2xl w-full self-center hidden';
+    container.appendChild(brandPanelWrap);
+
+    const BRAND_FIELDS = [
+        { key: 'brandVoice', label: 'Brand voice', placeholder: 'Tone, vocabulary, do/don\'t say…' },
+        { key: 'stylePreferences', label: 'Style preferences', placeholder: 'Color palette, mood, visual references…' },
+        { key: 'audience', label: 'Audience', placeholder: 'Who is this content for?' },
+        { key: 'persona', label: 'Persona', placeholder: 'Creator or brand character…' },
+        { key: 'notes', label: 'Notes', placeholder: 'Anything else the agent should remember…' },
+    ];
+
+    const renderBrandPanel = () => {
+        const brand = memory.getBrand();
+        brandPanelWrap.innerHTML = `
+            <div class="bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-bold text-primary uppercase tracking-wider">Brand memory</p>
+                    <button type="button" id="brand-panel-close"
+                        class="text-white/40 hover:text-white text-lg leading-none px-2">&times;</button>
+                </div>
+                <p class="text-[11px] text-white/40">Saved locally — steers every agent run via system prompt.</p>
+                <div class="flex flex-col gap-3" id="brand-fields"></div>
+                <button type="button" id="brand-save"
+                    class="self-end bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                    ${t('common.save')}
+                </button>
+            </div>
+        `;
+
+        const fieldsWrap = brandPanelWrap.querySelector('#brand-fields');
+        const fieldEls = {};
+        BRAND_FIELDS.forEach(({ key, label, placeholder }) => {
+            const group = document.createElement('div');
+            group.className = 'flex flex-col gap-1';
+            group.innerHTML = `
+                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">${escapeHtml(label)}</label>
+                <textarea data-brand-key="${key}" rows="2"
+                    placeholder="${escapeHtml(placeholder)}"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50 resize-none custom-scrollbar">${escapeHtml(brand[key] || '')}</textarea>
+            `;
+            fieldEls[key] = group.querySelector('textarea');
+            fieldsWrap.appendChild(group);
+        });
+
+        brandPanelWrap.querySelector('#brand-panel-close').onclick = () => {
+            brandPanelWrap.classList.add('hidden');
+        };
+
+        brandPanelWrap.querySelector('#brand-save').onclick = () => {
+            const payload = {};
+            BRAND_FIELDS.forEach(({ key }) => {
+                payload[key] = fieldEls[key].value;
+            });
+            memory.setBrand(payload);
+            brandPanelWrap.querySelector('#brand-save').textContent = 'Saved ✓';
+            setTimeout(() => {
+                brandPanelWrap.querySelector('#brand-save').textContent = t('common.save');
+            }, 1500);
+        };
+    };
+
+    let brandPanelRendered = false;
+    const toggleBrandPanel = () => {
+        if (brandPanelWrap.classList.contains('hidden')) {
+            if (!brandPanelRendered) {
+                renderBrandPanel();
+                brandPanelRendered = true;
+            } else {
+                renderBrandPanel();
+            }
+            brandPanelWrap.classList.remove('hidden');
+        } else {
+            brandPanelWrap.classList.add('hidden');
+        }
+    };
 
     // --- API key banner (adapts to selected brain) ---
     const keyBanner = document.createElement('div');
@@ -364,6 +447,63 @@ export function SupercomputerStudio() {
     const bottomRow = document.createElement('div');
     bottomRow.className = 'flex items-center justify-between gap-3 px-2 pt-2 border-t border-white/5';
 
+    const leftControls = document.createElement('div');
+    leftControls.className = 'flex items-center gap-2 flex-wrap';
+
+    const brandBtn = document.createElement('button');
+    brandBtn.type = 'button';
+    brandBtn.title = 'Brand memory';
+    brandBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    brandBtn.textContent = '⚙ Brand';
+    brandBtn.onclick = toggleBrandPanel;
+
+    const skillsWrap = document.createElement('div');
+    skillsWrap.className = 'relative';
+
+    const skillsBtn = document.createElement('button');
+    skillsBtn.type = 'button';
+    skillsBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    skillsBtn.textContent = 'Skills';
+
+    const skillsMenu = document.createElement('div');
+    skillsMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-3xl z-50';
+
+    const skillsHint = document.createElement('p');
+    skillsHint.className = 'text-[10px] text-white/40 px-2 py-1 border-b border-white/5 mb-1';
+    skillsHint.textContent = 'Type /trigger in your brief to invoke a skill';
+    skillsMenu.appendChild(skillsHint);
+
+    skills.forEach((skill) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all';
+        item.innerHTML = `
+            <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
+            <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(skill.description)}</span>
+        `;
+        item.onclick = () => {
+            const current = textarea.value.trim();
+            textarea.value = current ? `${current} ${skill.trigger} ` : `${skill.trigger} `;
+            textarea.focus();
+            textarea.dispatchEvent(new Event('input'));
+            skillsMenu.classList.add('hidden');
+        };
+        skillsMenu.appendChild(item);
+    });
+
+    skillsBtn.onclick = (e) => {
+        e.stopPropagation();
+        skillsMenu.classList.toggle('hidden');
+    };
+
+    document.addEventListener('click', () => skillsMenu.classList.add('hidden'));
+    skillsWrap.addEventListener('click', (e) => e.stopPropagation());
+    skillsWrap.appendChild(skillsBtn);
+    skillsWrap.appendChild(skillsMenu);
+
+    leftControls.appendChild(brandBtn);
+    leftControls.appendChild(skillsWrap);
+
     const brainSelect = document.createElement('select');
     brainSelect.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer';
     brainSelect.title = 'Agent brain';
@@ -405,9 +545,12 @@ export function SupercomputerStudio() {
         try {
             const provider = createProvider(selectedBrain);
             const registry = buildToolRegistry();
+            memory.setWorking({ ...memory.getWorking(), brain: selectedBrain });
             const agent = new Agent({
                 provider,
                 registry,
+                memory,
+                skills,
                 onEvent: handleEvent,
                 confirmPlan: (plan) =>
                     new Promise((resolve) => {
@@ -443,7 +586,8 @@ export function SupercomputerStudio() {
         }
     };
 
-    bottomRow.appendChild(brainSelect);
+    leftControls.appendChild(brainSelect);
+    bottomRow.appendChild(leftControls);
     bottomRow.appendChild(sendBtn);
     bar.appendChild(textarea);
     bar.appendChild(bottomRow);
