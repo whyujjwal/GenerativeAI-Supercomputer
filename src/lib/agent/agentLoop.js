@@ -1,4 +1,5 @@
 import { findSkillInBrief, listSkillsForPrompt } from './skills.js';
+import { buildPersonaContext } from './personas.js';
 
 const DEFAULT_MAX_ITERATIONS = 16;
 
@@ -33,9 +34,9 @@ Rules:
  */
 export class Agent {
   /**
-   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean>, memory?: import('./memory.js').MemoryStore, skills?: Array<Object> }} options
+   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean>, memory?: import('./memory.js').MemoryStore, skills?: Array<Object>, persona?: Object|null }} options
    */
-  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan, memory, skills }) {
+  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan, memory, skills, persona }) {
     this.provider = provider;
     this.registry = registry;
     this.onEvent = onEvent || (() => {});
@@ -43,6 +44,7 @@ export class Agent {
     this.confirmPlan = confirmPlan;
     this.memory = memory || null;
     this.skills = skills || null;
+    this.persona = persona || null;
   }
 
   /**
@@ -65,12 +67,20 @@ export class Agent {
       if (skillLines) {
         system += `\n\nAvailable skills (user may invoke with /trigger prefix):\n${skillLines}`;
       }
+    }
+
+    const personaContext = buildPersonaContext(this.persona);
+    let skillGuidance = '';
+    if (this.skills) {
       const match = findSkillInBrief(brief);
       if (match) {
-        system = `${match.skill.guidance}\n\n${system}`;
+        skillGuidance = match.skill.guidance;
         effectiveBrief = match.rest || brief;
       }
     }
+
+    const parts = [personaContext, skillGuidance, system].filter(Boolean);
+    system = parts.join('\n\n');
 
     if (this.memory) {
       system += this.memory.buildMemoryContext();

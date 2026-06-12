@@ -3,6 +3,18 @@ import { buildToolRegistry } from '../lib/agent/tools.js';
 import { Agent } from '../lib/agent/agentLoop.js';
 import { MemoryStore } from '../lib/agent/memory.js';
 import { loadSkills } from '../lib/agent/skills.js';
+import {
+    getActivePersona,
+    setActivePersona,
+    clearActivePersona,
+    listPersonas,
+} from '../lib/agent/personas.js';
+import {
+    listMarketplaceSkills,
+    listMarketplacePersonas,
+    installSkill,
+    uninstallSkill,
+} from '../lib/agent/marketplace.js';
 import { t } from '../lib/i18n.js';
 
 function isVideoUrl(url) {
@@ -63,7 +75,20 @@ export function SupercomputerStudio() {
     let selectedBrain = getSelectedBrain();
 
     const memory = new MemoryStore();
-    const skills = loadSkills();
+    let skills = loadSkills();
+    let activePersona = getActivePersona();
+
+    const updateBriefPlaceholder = () => {
+        if (activePersona) {
+            const hint = activePersona.skills?.[0] || '';
+            textarea.placeholder = hint
+                ? `${activePersona.tagline} — try ${hint} in your brief…`
+                : `${activePersona.tagline} — describe your creative brief…`;
+        } else {
+            textarea.placeholder =
+                'Describe your creative brief… e.g. "generate an image of a neon cyberpunk cat"';
+        }
+    };
 
     // --- Brand panel ---
     const brandPanelWrap = document.createElement('div');
@@ -436,7 +461,6 @@ export function SupercomputerStudio() {
     bar.className = 'max-w-3xl mx-auto w-full bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-3 md:p-4 flex flex-col gap-3 shadow-3xl';
 
     const textarea = document.createElement('textarea');
-    textarea.placeholder = 'Describe your creative brief… e.g. "generate an image of a neon cyberpunk cat"';
     textarea.className = 'w-full bg-transparent border-none text-white text-base md:text-lg placeholder:text-muted focus:outline-none resize-none leading-relaxed min-h-[48px] max-h-[150px] overflow-y-auto custom-scrollbar px-2';
     textarea.rows = 1;
     textarea.oninput = () => {
@@ -473,23 +497,32 @@ export function SupercomputerStudio() {
     skillsHint.textContent = 'Type /trigger in your brief to invoke a skill';
     skillsMenu.appendChild(skillsHint);
 
-    skills.forEach((skill) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all';
-        item.innerHTML = `
-            <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
-            <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(skill.description)}</span>
-        `;
-        item.onclick = () => {
-            const current = textarea.value.trim();
-            textarea.value = current ? `${current} ${skill.trigger} ` : `${skill.trigger} `;
-            textarea.focus();
-            textarea.dispatchEvent(new Event('input'));
-            skillsMenu.classList.add('hidden');
-        };
-        skillsMenu.appendChild(item);
-    });
+    const skillsListEl = document.createElement('div');
+    skillsListEl.id = 'skills-menu-list';
+    skillsMenu.appendChild(skillsListEl);
+
+    const renderSkillsMenu = () => {
+        skills = loadSkills();
+        skillsListEl.innerHTML = '';
+        skills.forEach((skill) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all';
+            item.innerHTML = `
+                <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
+                <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(skill.description)}</span>
+            `;
+            item.onclick = () => {
+                const current = textarea.value.trim();
+                textarea.value = current ? `${current} ${skill.trigger} ` : `${skill.trigger} `;
+                textarea.focus();
+                textarea.dispatchEvent(new Event('input'));
+                skillsMenu.classList.add('hidden');
+            };
+            skillsListEl.appendChild(item);
+        });
+    };
+    renderSkillsMenu();
 
     skillsBtn.onclick = (e) => {
         e.stopPropagation();
@@ -503,6 +536,213 @@ export function SupercomputerStudio() {
 
     leftControls.appendChild(brandBtn);
     leftControls.appendChild(skillsWrap);
+
+    const marketplaceBtn = document.createElement('button');
+    marketplaceBtn.type = 'button';
+    marketplaceBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    marketplaceBtn.textContent = 'Marketplace';
+    leftControls.appendChild(marketplaceBtn);
+
+    const personaWrap = document.createElement('div');
+    personaWrap.className = 'relative';
+
+    const personaBtn = document.createElement('button');
+    personaBtn.type = 'button';
+    personaBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold tracking-wider hover:border-primary/50 hover:text-white transition-all flex items-center gap-1.5 max-w-[11rem] truncate';
+    personaBtn.title = 'Active persona';
+
+    const personaMenu = document.createElement('div');
+    personaMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-3xl z-50';
+
+    const renderPersonaBtn = () => {
+        if (activePersona) {
+            personaBtn.innerHTML = `<span>${activePersona.emoji}</span><span class="truncate">${escapeHtml(activePersona.name)}</span>`;
+        } else {
+            personaBtn.textContent = 'No persona';
+        }
+    };
+
+    const renderPersonaMenu = () => {
+        personaMenu.innerHTML = '';
+        const hint = document.createElement('p');
+        hint.className = 'text-[10px] text-white/40 px-2 py-1 border-b border-white/5 mb-1';
+        hint.textContent = 'Select an AI employee persona';
+        personaMenu.appendChild(hint);
+
+        const noneItem = document.createElement('button');
+        noneItem.type = 'button';
+        noneItem.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all ${!activePersona ? 'bg-primary/10 border border-primary/20' : ''}`;
+        noneItem.innerHTML = '<span class="text-white/70 text-xs font-bold">No persona</span>';
+        noneItem.onclick = () => {
+            clearActivePersona();
+            activePersona = null;
+            renderPersonaBtn();
+            updateBriefPlaceholder();
+            personaMenu.classList.add('hidden');
+        };
+        personaMenu.appendChild(noneItem);
+
+        listPersonas().forEach((persona) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            const isActive = activePersona?.id === persona.id;
+            item.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all ${isActive ? 'bg-primary/10 border border-primary/20' : ''}`;
+            item.innerHTML = `
+                <span class="text-white text-xs font-bold">${persona.emoji} ${escapeHtml(persona.name)}</span>
+                <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(persona.tagline)}</span>
+            `;
+            item.onclick = () => {
+                setActivePersona(persona.id);
+                activePersona = getActivePersona();
+                renderPersonaBtn();
+                updateBriefPlaceholder();
+                personaMenu.classList.add('hidden');
+            };
+            personaMenu.appendChild(item);
+        });
+    };
+
+    renderPersonaBtn();
+    renderPersonaMenu();
+    personaBtn.onclick = (e) => {
+        e.stopPropagation();
+        renderPersonaMenu();
+        personaMenu.classList.toggle('hidden');
+    };
+    personaWrap.addEventListener('click', (e) => e.stopPropagation());
+    personaWrap.appendChild(personaBtn);
+    personaWrap.appendChild(personaMenu);
+
+    const marketplaceOverlay = document.createElement('div');
+    marketplaceOverlay.className = 'hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';
+
+    const marketplaceModal = document.createElement('div');
+    marketplaceModal.className = 'bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-3xl';
+
+    let marketplaceTab = 'personas';
+
+    const renderMarketplaceModal = () => {
+        marketplaceModal.innerHTML = `
+            <div class="flex items-center justify-between gap-2 p-4 border-b border-white/10">
+                <p class="text-xs font-bold text-primary uppercase tracking-wider">Marketplace</p>
+                <button type="button" id="marketplace-close"
+                    class="text-white/40 hover:text-white text-lg leading-none px-2">&times;</button>
+            </div>
+            <div class="flex gap-1 p-2 border-b border-white/5">
+                <button type="button" data-tab="personas"
+                    class="flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'personas' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    Personas
+                </button>
+                <button type="button" data-tab="skills"
+                    class="flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'skills' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    Skills
+                </button>
+            </div>
+            <div id="marketplace-content" class="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-3"></div>
+        `;
+
+        marketplaceModal.querySelector('#marketplace-close').onclick = () => {
+            marketplaceOverlay.classList.add('hidden');
+        };
+
+        marketplaceModal.querySelectorAll('[data-tab]').forEach((tabBtn) => {
+            tabBtn.onclick = () => {
+                marketplaceTab = tabBtn.dataset.tab;
+                renderMarketplaceModal();
+            };
+        });
+
+        const content = marketplaceModal.querySelector('#marketplace-content');
+
+        if (marketplaceTab === 'personas') {
+            listMarketplacePersonas().forEach((persona) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2';
+                const skillTags = (persona.skills || [])
+                    .map((s) => `<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-bold">${escapeHtml(s)}</span>`)
+                    .join(' ');
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-white text-sm font-bold">${persona.emoji} ${escapeHtml(persona.name)}</p>
+                            <p class="text-[11px] text-white/50 mt-0.5">${escapeHtml(persona.tagline)}</p>
+                        </div>
+                        <button type="button" class="persona-activate shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${persona.active ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' : 'bg-white/10 text-white hover:bg-white/15'}">
+                            ${persona.active ? 'Active' : 'Activate'}
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-white/40 leading-relaxed">${escapeHtml(persona.description)}</p>
+                    <div class="flex flex-wrap gap-1">${skillTags}</div>
+                `;
+                const activateBtn = card.querySelector('.persona-activate');
+                if (!persona.active) {
+                    activateBtn.onclick = () => {
+                        setActivePersona(persona.id);
+                        activePersona = getActivePersona();
+                        renderPersonaBtn();
+                        renderPersonaMenu();
+                        updateBriefPlaceholder();
+                        renderMarketplaceModal();
+                    };
+                }
+                content.appendChild(card);
+            });
+        } else {
+            listMarketplaceSkills().forEach((skill) => {
+                const row = document.createElement('div');
+                row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex items-start justify-between gap-3';
+                const builtinBadge = skill.builtin
+                    ? '<span class="text-[9px] uppercase tracking-widest text-white/30 font-bold">Built-in</span>'
+                    : '';
+                row.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
+                            ${builtinBadge}
+                        </div>
+                        <p class="text-[11px] text-white/50 mt-1 leading-relaxed">${escapeHtml(skill.description)}</p>
+                    </div>
+                    <button type="button" class="skill-toggle shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"></button>
+                `;
+                const toggleBtn = row.querySelector('.skill-toggle');
+                if (skill.builtin) {
+                    toggleBtn.textContent = 'Built-in';
+                    toggleBtn.className += ' bg-white/5 text-white/30 cursor-default';
+                } else if (skill.installed) {
+                    toggleBtn.textContent = 'Installed';
+                    toggleBtn.className += ' bg-primary/20 text-primary border border-primary/30 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/30';
+                    toggleBtn.onclick = () => {
+                        uninstallSkill(skill.trigger);
+                        renderSkillsMenu();
+                        renderMarketplaceModal();
+                    };
+                } else {
+                    toggleBtn.textContent = 'Install';
+                    toggleBtn.className += ' bg-white/10 text-white hover:bg-primary/20 hover:text-primary hover:border-primary/30';
+                    toggleBtn.onclick = () => {
+                        installSkill(skill);
+                        renderSkillsMenu();
+                        renderMarketplaceModal();
+                    };
+                }
+                content.appendChild(row);
+            });
+        }
+    };
+
+    marketplaceOverlay.appendChild(marketplaceModal);
+    marketplaceOverlay.onclick = (e) => {
+        if (e.target === marketplaceOverlay) marketplaceOverlay.classList.add('hidden');
+    };
+    marketplaceModal.onclick = (e) => e.stopPropagation();
+    container.appendChild(marketplaceOverlay);
+
+    marketplaceBtn.onclick = () => {
+        renderMarketplaceModal();
+        marketplaceOverlay.classList.remove('hidden');
+    };
+
+    document.addEventListener('click', () => personaMenu.classList.add('hidden'));
 
     const brainSelect = document.createElement('select');
     brainSelect.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer';
@@ -550,7 +790,8 @@ export function SupercomputerStudio() {
                 provider,
                 registry,
                 memory,
-                skills,
+                skills: loadSkills(),
+                persona: activePersona,
                 onEvent: handleEvent,
                 confirmPlan: (plan) =>
                     new Promise((resolve) => {
@@ -586,8 +827,10 @@ export function SupercomputerStudio() {
         }
     };
 
+    leftControls.appendChild(personaWrap);
     leftControls.appendChild(brainSelect);
     bottomRow.appendChild(leftControls);
+    updateBriefPlaceholder();
     bottomRow.appendChild(sendBtn);
     bar.appendChild(textarea);
     bar.appendChild(bottomRow);
