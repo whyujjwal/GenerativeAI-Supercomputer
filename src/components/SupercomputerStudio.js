@@ -703,6 +703,219 @@ export function SupercomputerStudio() {
 
     let marketplaceTab = 'personas';
 
+    const CRON_PRESETS = [
+        { label: 'Daily 9am', cron: '0 9 * * *' },
+        { label: 'Hourly', cron: '0 * * * *' },
+        { label: 'Weekly Mon 9am', cron: '0 9 * * 1' },
+    ];
+
+    const formatLastRun = (iso) => {
+        if (!iso) return 'Never';
+        try {
+            return new Date(iso).toLocaleString();
+        } catch {
+            return iso;
+        }
+    };
+
+    const renderSchedulesPanel = async (content) => {
+        content.innerHTML = `
+            <p class="text-[11px] text-white/40 leading-relaxed">
+                Run creative briefs on a cron while the client is closed. Requires server-side
+                <span class="text-white/60">MUAPI_KEY</span> and brain keys (<span class="text-white/60">ANTHROPIC_KEY</span> / <span class="text-white/60">OPENAI_KEY</span> / <span class="text-white/60">GEMINI_KEY</span>) in the connector server <code class="text-primary/80">.env</code>.
+                Telegram briefs use the same keys via <span class="text-white/60">TELEGRAM_BOT_TOKEN</span>.
+            </p>
+            <div id="schedules-create" class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-3"></div>
+            <div id="schedules-list" class="flex flex-col gap-2"></div>
+        `;
+
+        const createWrap = content.querySelector('#schedules-create');
+        const listWrap = content.querySelector('#schedules-list');
+
+        if (!backendClient.isConfigured()) {
+            listWrap.innerHTML = '<p class="text-[11px] text-white/40">Set a backend URL in the Connectors tab to manage schedules.</p>';
+            createWrap.classList.add('hidden');
+            return;
+        }
+
+        createWrap.innerHTML = `
+            <p class="text-[10px] font-bold text-primary uppercase tracking-wider">New schedule</p>
+            <input type="text" id="schedule-name" placeholder="Schedule name"
+                class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
+            <textarea id="schedule-brief" rows="2" placeholder="Creative brief to run on schedule…"
+                class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50 resize-none custom-scrollbar"></textarea>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cron</label>
+                <input type="text" id="schedule-cron" value="0 9 * * *"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-primary/50">
+                <div class="flex flex-wrap gap-1.5" id="schedule-cron-presets"></div>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Brain</label>
+                <select id="schedule-brain"
+                    class="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer">
+                    ${PROVIDERS.map((p) => `<option value="${p.id}">${escapeHtml(p.label)}</option>`).join('')}
+                </select>
+                <label class="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+                    <input type="checkbox" id="schedule-enabled" checked
+                        class="rounded border-white/20 bg-black/40 text-primary focus:ring-primary/50">
+                    Enabled
+                </label>
+            </div>
+            <button type="button" id="schedule-create-btn"
+                class="self-end bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                Create schedule
+            </button>
+        `;
+
+        const presetsWrap = createWrap.querySelector('#schedule-cron-presets');
+        const cronInput = createWrap.querySelector('#schedule-cron');
+        CRON_PRESETS.forEach(({ label, cron }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 hover:bg-primary/20 hover:text-primary transition-all';
+            btn.textContent = label;
+            btn.onclick = () => {
+                cronInput.value = cron;
+            };
+            presetsWrap.appendChild(btn);
+        });
+
+        const renderScheduleList = async () => {
+            listWrap.innerHTML = '<p class="text-[11px] text-white/40 py-2">Loading schedules…</p>';
+            const schedules = await backendClient.listSchedules();
+
+            if (schedules?.disabled) {
+                listWrap.innerHTML = '<p class="text-[11px] text-white/40">Backend not configured.</p>';
+                return;
+            }
+
+            if (schedules?.ok === false) {
+                listWrap.innerHTML = `<p class="text-[11px] text-red-300/80">${escapeHtml(schedules.error || 'Failed to load schedules')}</p>`;
+                return;
+            }
+
+            const items = Array.isArray(schedules) ? schedules : [];
+            if (!items.length) {
+                listWrap.innerHTML = '<p class="text-[11px] text-white/40 py-2">No schedules yet.</p>';
+                return;
+            }
+
+            listWrap.innerHTML = '';
+            items.forEach((schedule) => {
+                const lastOk = schedule.lastStatus?.ok;
+                const statusClass =
+                    lastOk === true ? 'text-green-400' : lastOk === false ? 'text-red-400' : 'text-white/30';
+                const statusLabel =
+                    lastOk === true ? 'OK' : lastOk === false ? 'Failed' : '—';
+
+                const row = document.createElement('div');
+                row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2';
+                row.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white text-sm font-bold">${escapeHtml(schedule.name)}</p>
+                            <p class="text-[11px] text-white/50 mt-0.5 font-mono">${escapeHtml(schedule.cron)}</p>
+                            <p class="text-[10px] text-white/40 mt-1">
+                                Brain: <span class="text-white/60">${escapeHtml(schedule.brain || 'claude')}</span>
+                                · Last run: ${escapeHtml(formatLastRun(schedule.lastRun))}
+                                · <span class="${statusClass} font-bold uppercase">${statusLabel}</span>
+                            </p>
+                        </div>
+                        <label class="flex items-center gap-1.5 shrink-0 text-[10px] text-white/50 cursor-pointer">
+                            <input type="checkbox" class="schedule-enabled-toggle rounded border-white/20 bg-black/40 text-primary"
+                                data-id="${escapeHtml(schedule.id)}" ${schedule.enabled ? 'checked' : ''}>
+                            On
+                        </label>
+                    </div>
+                    <p class="text-[11px] text-white/40 line-clamp-2">${escapeHtml(schedule.brief)}</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" class="schedule-run-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all"
+                            data-id="${escapeHtml(schedule.id)}">Run now</button>
+                        <button type="button" class="schedule-delete-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-300 border border-red-500/30 hover:bg-red-500/20 transition-all"
+                            data-id="${escapeHtml(schedule.id)}">Delete</button>
+                    </div>
+                `;
+
+                row.querySelector('.schedule-enabled-toggle').onchange = async (e) => {
+                    const id = e.target.dataset.id;
+                    e.target.disabled = true;
+                    const res = await backendClient.updateSchedule(id, { enabled: e.target.checked });
+                    if (res?.ok === false || res?.error) {
+                        e.target.checked = !e.target.checked;
+                        showConnectorNote(res?.error || 'Failed to update schedule', { tone: 'error' });
+                    }
+                    e.target.disabled = false;
+                };
+
+                row.querySelector('.schedule-run-btn').onclick = async (e) => {
+                    const btn = e.currentTarget;
+                    const id = btn.dataset.id;
+                    btn.disabled = true;
+                    btn.textContent = 'Running…';
+                    const res = await backendClient.runSchedule(id);
+                    if (res?.ok === false && !res?.schedule) {
+                        showConnectorNote(res?.error || 'Run failed', { tone: 'error' });
+                    } else if (res?.ok) {
+                        showConnectorNote('Schedule run completed.', { tone: 'success' });
+                    } else if (res?.error) {
+                        showConnectorNote(res.error, { tone: 'error' });
+                    }
+                    await renderScheduleList();
+                };
+
+                row.querySelector('.schedule-delete-btn').onclick = async (e) => {
+                    const btn = e.currentTarget;
+                    const id = btn.dataset.id;
+                    btn.disabled = true;
+                    const res = await backendClient.deleteSchedule(id);
+                    if (res?.ok === false) {
+                        showConnectorNote(res?.error || 'Delete failed', { tone: 'error' });
+                        btn.disabled = false;
+                        return;
+                    }
+                    await renderScheduleList();
+                };
+
+                listWrap.appendChild(row);
+            });
+        };
+
+        createWrap.querySelector('#schedule-create-btn').onclick = async () => {
+            const name = createWrap.querySelector('#schedule-name').value.trim();
+            const brief = createWrap.querySelector('#schedule-brief').value.trim();
+            const cron = createWrap.querySelector('#schedule-cron').value.trim();
+            const brain = createWrap.querySelector('#schedule-brain').value;
+            const enabled = createWrap.querySelector('#schedule-enabled').checked;
+
+            if (!name || !brief || !cron) {
+                showConnectorNote('Name, brief, and cron are required.', { tone: 'error' });
+                return;
+            }
+
+            const btn = createWrap.querySelector('#schedule-create-btn');
+            btn.disabled = true;
+            const res = await backendClient.createSchedule({ name, brief, cron, brain, enabled });
+            btn.disabled = false;
+
+            if (res?.disabled) {
+                showConnectorNote('Backend not configured.', { tone: 'error' });
+                return;
+            }
+            if (res?.ok === false || res?.error) {
+                showConnectorNote(res?.error || 'Failed to create schedule', { tone: 'error' });
+                return;
+            }
+
+            createWrap.querySelector('#schedule-name').value = '';
+            createWrap.querySelector('#schedule-brief').value = '';
+            showConnectorNote('Schedule created.', { tone: 'success' });
+            await renderScheduleList();
+        };
+
+        await renderScheduleList();
+    };
+
     const renderConnectorsPanel = (content) => {
         const backendUrl = backendClient.getBackendUrl();
         const reachabilityNote = backendClient.isConfigured()
@@ -817,6 +1030,10 @@ export function SupercomputerStudio() {
                     class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'connectors' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
                     Connectors
                 </button>
+                <button type="button" data-tab="schedules"
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'schedules' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    Schedules
+                </button>
             </div>
             <div id="marketplace-content" class="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-3"></div>
         `;
@@ -836,6 +1053,8 @@ export function SupercomputerStudio() {
 
         if (marketplaceTab === 'connectors') {
             renderConnectorsPanel(content);
+        } else if (marketplaceTab === 'schedules') {
+            renderSchedulesPanel(content);
         } else if (marketplaceTab === 'personas') {
             listMarketplacePersonas().forEach((persona) => {
                 const card = document.createElement('div');

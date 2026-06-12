@@ -6,6 +6,7 @@ import connectorsRouter from './connectors/index.js';
 import oauthRouter from './oauth/index.js';
 import schedulesRouter from './schedules/index.js';
 import { startScheduler } from './schedules/scheduler.js';
+import telegramRouter from './telegram/webhook.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/oauth', oauthRouter);
 app.use('/api/connectors', connectorsRouter);
 app.use('/api/schedules', schedulesRouter);
+app.use('/api/telegram', telegramRouter);
 
 app.use((err, _req, res, next) => {
   if (!err) {

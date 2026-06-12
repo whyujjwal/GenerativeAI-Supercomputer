@@ -95,3 +95,48 @@ export async function disconnect(provider) {
         method: 'POST',
     });
 }
+
+export async function listSchedules() {
+    if (!isConfigured()) {
+        return { disabled: true };
+    }
+    return request('/api/schedules');
+}
+
+export async function createSchedule(body) {
+    if (!isConfigured()) {
+        return { disabled: true };
+    }
+    return request('/api/schedules', {
+        method: 'POST',
+        body: JSON.stringify(body ?? {}),
+    });
+}
+
+export async function updateSchedule(id, body) {
+    if (!isConfigured()) {
+        return { disabled: true };
+    }
+    return request(`/api/schedules/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(body ?? {}),
+    });
+}
+
+export async function deleteSchedule(id) {
+    if (!isConfigured()) {
+        return { disabled: true };
+    }
+    return request(`/api/schedules/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    });
+}
+
+export async function runSchedule(id) {
+    if (!isConfigured()) {
+        return { disabled: true };
+    }
+    return request(`/api/schedules/${encodeURIComponent(id)}/run`, {
+        method: 'POST',
+    });
+}

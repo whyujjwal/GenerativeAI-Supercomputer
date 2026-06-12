@@ -34,6 +34,8 @@ const config = {
     openai: readEnv('OPENAI_KEY'),
     gemini: readEnv('GEMINI_KEY'),
   },
+  telegramBotToken: readEnv('TELEGRAM_BOT_TOKEN'),
+  telegramWebhookSecret: readEnv('TELEGRAM_WEBHOOK_SECRET'),
   providers: {
     slack: providerConfig('SLACK'),
     google: providerConfig('GOOGLE'),
