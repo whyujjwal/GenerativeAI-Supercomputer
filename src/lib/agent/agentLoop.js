@@ -31,13 +31,14 @@ Rules:
  */
 export class Agent {
   /**
-   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number }} options
+   * @param {{ provider: import('./llmProvider.js').LLMProvider, registry: ReturnType<import('./tools.js').buildToolRegistry>, onEvent?: (event: Object) => void, maxIterations?: number, confirmPlan?: (plan: { text: string, toolCalls: import('./llmProvider.js').ToolCall[] }) => Promise<boolean> }} options
    */
-  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS }) {
+  constructor({ provider, registry, onEvent, maxIterations = DEFAULT_MAX_ITERATIONS, confirmPlan }) {
     this.provider = provider;
     this.registry = registry;
     this.onEvent = onEvent || (() => {});
     this.maxIterations = maxIterations;
+    this.confirmPlan = confirmPlan;
   }
 
   /**
@@ -56,6 +57,7 @@ export class Agent {
     /** @type {import('./llmProvider.js').NormalizedMessage[]} */
     const messages = [{ role: 'user', content: brief }];
     let lastText = null;
+    let planConfirmed = false;
 
     for (let iteration = 0; iteration < this.maxIterations; iteration += 1) {
       let result;
@@ -84,12 +86,21 @@ export class Agent {
         return { text: text || lastText, messages };
       }
 
-      this._emit({
-        type: 'plan',
-        text: text || '',
-        toolCalls,
-        iteration,
-      });
+      if (this.confirmPlan && !planConfirmed) {
+        const approved = await this.confirmPlan({ text: text || '', toolCalls });
+        planConfirmed = true;
+        if (!approved) {
+          this._emit({ type: 'cancelled' });
+          return { text: text || lastText, messages };
+        }
+      } else {
+        this._emit({
+          type: 'plan',
+          text: text || '',
+          toolCalls,
+          iteration,
+        });
+      }
 
       if (text) {
         this._emit({ type: 'assistant', text });

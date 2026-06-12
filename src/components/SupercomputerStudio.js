@@ -1,4 +1,4 @@
-import { ClaudeProvider } from '../lib/agent/llmProvider.js';
+import { createProvider, PROVIDERS } from '../lib/agent/llmProvider.js';
 import { buildToolRegistry } from '../lib/agent/tools.js';
 import { Agent } from '../lib/agent/agentLoop.js';
 import { t } from '../lib/i18n.js';
@@ -47,40 +47,73 @@ export function SupercomputerStudio() {
     `;
     container.appendChild(hero);
 
-    // --- Anthropic API key banner ---
+    const BRAIN_STORAGE_KEY = 'supercomputer_brain';
+
+    const getSelectedBrain = () => {
+        const stored = localStorage.getItem(BRAIN_STORAGE_KEY);
+        if (stored && PROVIDERS.some((p) => p.id === stored)) return stored;
+        return 'claude';
+    };
+
+    const getProviderMeta = (brainId = getSelectedBrain()) =>
+        PROVIDERS.find((p) => p.id === brainId) || PROVIDERS[0];
+
+    let selectedBrain = getSelectedBrain();
+
+    // --- API key banner (adapts to selected brain) ---
     const keyBanner = document.createElement('div');
     keyBanner.className = 'shrink-0 mx-4 mb-3 max-w-2xl w-full self-center';
     container.appendChild(keyBanner);
 
+    const KEY_BANNER_COPY = {
+        claude: {
+            title: 'Anthropic API key required',
+            hint: 'Paste your Anthropic API key to power the agent brain.',
+            placeholder: 'sk-ant-...',
+        },
+        openai: {
+            title: 'OpenAI API key required',
+            hint: 'Paste your OpenAI API key to power the agent brain.',
+            placeholder: 'sk-...',
+        },
+        gemini: {
+            title: 'Gemini API key required',
+            hint: 'Paste your Google Gemini API key to power the agent brain.',
+            placeholder: 'AIza...',
+        },
+    };
+
     const renderKeyBanner = () => {
-        if (localStorage.getItem('anthropic_key')) {
+        const meta = getProviderMeta(selectedBrain);
+        if (localStorage.getItem(meta.keyStorageKey)) {
             keyBanner.classList.add('hidden');
             keyBanner.innerHTML = '';
             return;
         }
+        const copy = KEY_BANNER_COPY[meta.id] || KEY_BANNER_COPY.claude;
         keyBanner.classList.remove('hidden');
         keyBanner.innerHTML = `
             <div class="bg-[#111]/90 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">Anthropic API key required</p>
-                    <p class="text-[11px] text-white/50">Paste your Anthropic API key to power the agent brain.</p>
+                    <p class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">${copy.title}</p>
+                    <p class="text-[11px] text-white/50">${copy.hint}</p>
                 </div>
                 <div class="flex gap-2 flex-1 sm:max-w-md">
-                    <input type="password" id="anthropic-key-input"
-                        placeholder="sk-ant-..."
+                    <input type="password" id="brain-key-input"
+                        placeholder="${copy.placeholder}"
                         class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
-                    <button id="anthropic-key-save"
+                    <button id="brain-key-save"
                         class="shrink-0 bg-primary text-black font-bold px-4 py-2.5 rounded-xl text-sm hover:shadow-glow transition-all">
                         ${t('common.save')}
                     </button>
                 </div>
             </div>
         `;
-        keyBanner.querySelector('#anthropic-key-save').onclick = () => {
-            const input = keyBanner.querySelector('#anthropic-key-input');
+        keyBanner.querySelector('#brain-key-save').onclick = () => {
+            const input = keyBanner.querySelector('#brain-key-input');
             const key = input.value.trim();
             if (key) {
-                localStorage.setItem('anthropic_key', key);
+                localStorage.setItem(meta.keyStorageKey, key);
                 renderKeyBanner();
             } else {
                 input.classList.add('border-red-500/50');
@@ -135,7 +168,7 @@ export function SupercomputerStudio() {
         appendRow(row);
     };
 
-    const appendPlanBlock = (text, toolCalls) => {
+    const appendPlanBlock = (text, toolCalls, { awaitingApproval = false, onApprove, onCancel } = {}) => {
         const block = document.createElement('div');
         block.className = 'bg-[#111]/80 backdrop-blur border border-white/10 rounded-2xl p-4 flex flex-col gap-3';
         if (text) {
@@ -147,7 +180,7 @@ export function SupercomputerStudio() {
         if (toolCalls?.length) {
             const label = document.createElement('p');
             label.className = 'text-[10px] font-bold text-primary uppercase tracking-widest';
-            label.textContent = 'Pending tool calls';
+            label.textContent = awaitingApproval ? 'Approve plan before running tools' : 'Pending tool calls';
             block.appendChild(label);
             const list = document.createElement('ul');
             list.className = 'flex flex-col gap-2';
@@ -162,7 +195,36 @@ export function SupercomputerStudio() {
             });
             block.appendChild(list);
         }
+        if (awaitingApproval) {
+            const costNote = document.createElement('p');
+            costNote.className = 'text-[11px] text-white/40';
+            costNote.textContent = 'Cost shown on the provider';
+            block.appendChild(costNote);
+
+            const actions = document.createElement('div');
+            actions.className = 'flex gap-2 pt-1';
+            const approveBtn = document.createElement('button');
+            approveBtn.className = 'bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all';
+            approveBtn.textContent = 'Approve';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'bg-white/10 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-white/15 transition-all';
+            cancelBtn.textContent = 'Cancel';
+            approveBtn.onclick = () => {
+                approveBtn.disabled = true;
+                cancelBtn.disabled = true;
+                onApprove?.();
+            };
+            cancelBtn.onclick = () => {
+                approveBtn.disabled = true;
+                cancelBtn.disabled = true;
+                onCancel?.();
+            };
+            actions.appendChild(approveBtn);
+            actions.appendChild(cancelBtn);
+            block.appendChild(actions);
+        }
         appendRow(block);
+        return block;
     };
 
     const appendToolStart = (name) => {
@@ -225,6 +287,13 @@ export function SupercomputerStudio() {
         appendRow(row);
     };
 
+    const appendCancelledBubble = () => {
+        const row = document.createElement('div');
+        row.className = 'bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-amber-200';
+        row.textContent = 'Plan cancelled — no tools were run.';
+        appendRow(row);
+    };
+
     const appendDoneBubble = (text) => {
         if (!text) return;
         const row = document.createElement('div');
@@ -238,10 +307,20 @@ export function SupercomputerStudio() {
         appendRow(row);
     };
 
+    let confirmPlanResolver = null;
+
     const handleEvent = (event) => {
         switch (event.type) {
             case 'plan':
-                appendPlanBlock(event.text, event.toolCalls);
+                if (confirmPlanResolver) {
+                    appendPlanBlock(event.text, event.toolCalls, {
+                        awaitingApproval: true,
+                        onApprove: () => confirmPlanResolver(true),
+                        onCancel: () => confirmPlanResolver(false),
+                    });
+                } else {
+                    appendPlanBlock(event.text, event.toolCalls);
+                }
                 break;
             case 'tool_start':
                 appendToolStart(event.name);
@@ -254,6 +333,9 @@ export function SupercomputerStudio() {
                 break;
             case 'error':
                 appendError(event.message || 'Unknown error');
+                break;
+            case 'cancelled':
+                appendCancelledBubble();
                 break;
             case 'done':
                 appendDoneBubble(event.text);
@@ -280,7 +362,23 @@ export function SupercomputerStudio() {
     };
 
     const bottomRow = document.createElement('div');
-    bottomRow.className = 'flex items-center justify-end px-2 pt-2 border-t border-white/5';
+    bottomRow.className = 'flex items-center justify-between gap-3 px-2 pt-2 border-t border-white/5';
+
+    const brainSelect = document.createElement('select');
+    brainSelect.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer';
+    brainSelect.title = 'Agent brain';
+    for (const provider of PROVIDERS) {
+        const option = document.createElement('option');
+        option.value = provider.id;
+        option.textContent = provider.label;
+        brainSelect.appendChild(option);
+    }
+    brainSelect.value = selectedBrain;
+    brainSelect.onchange = () => {
+        selectedBrain = brainSelect.value;
+        localStorage.setItem(BRAIN_STORAGE_KEY, selectedBrain);
+        renderKeyBanner();
+    };
 
     const sendBtn = document.createElement('button');
     sendBtn.className = 'bg-primary text-black px-6 md:px-8 py-3 rounded-xl md:rounded-[1.25rem] font-black text-sm md:text-base hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100';
@@ -294,7 +392,8 @@ export function SupercomputerStudio() {
     };
 
     const runAgent = async (briefText) => {
-        if (!localStorage.getItem('anthropic_key')) {
+        const meta = getProviderMeta(selectedBrain);
+        if (!localStorage.getItem(meta.keyStorageKey)) {
             renderKeyBanner();
             keyBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             return;
@@ -304,20 +403,26 @@ export function SupercomputerStudio() {
         setRunning(true);
 
         try {
-            const provider = new ClaudeProvider();
+            const provider = createProvider(selectedBrain);
             const registry = buildToolRegistry();
             const agent = new Agent({
                 provider,
                 registry,
                 onEvent: handleEvent,
+                confirmPlan: (plan) =>
+                    new Promise((resolve) => {
+                        confirmPlanResolver = resolve;
+                        handleEvent({ type: 'plan', text: plan.text, toolCalls: plan.toolCalls });
+                    }),
             });
             await agent.run(briefText);
         } catch (err) {
             // error event already emitted by agent loop; ensure UI shows something
-            if (!err.message?.includes('Anthropic API key')) {
+            if (!err.message?.includes('API key')) {
                 appendError(err.message || String(err));
             }
         } finally {
+            confirmPlanResolver = null;
             setRunning(false);
         }
     };
@@ -338,6 +443,7 @@ export function SupercomputerStudio() {
         }
     };
 
+    bottomRow.appendChild(brainSelect);
     bottomRow.appendChild(sendBtn);
     bar.appendChild(textarea);
     bar.appendChild(bottomRow);
