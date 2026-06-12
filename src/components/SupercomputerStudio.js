@@ -1,5 +1,7 @@
 import { createProvider, PROVIDERS } from '../lib/agent/llmProvider.js';
 import { buildToolRegistry } from '../lib/agent/tools.js';
+import { buildConnectorTools } from '../lib/agent/connectorTools.js';
+import * as backendClient from '../lib/agent/backendClient.js';
 import { Agent } from '../lib/agent/agentLoop.js';
 import { MemoryStore } from '../lib/agent/memory.js';
 import { loadSkills } from '../lib/agent/skills.js';
@@ -77,6 +79,86 @@ export function SupercomputerStudio() {
     const memory = new MemoryStore();
     let skills = loadSkills();
     let activePersona = getActivePersona();
+
+    let connectorStatus = { slack: false, google: false, notion: false };
+    let backendReachable = false;
+
+    const connectorNoteWrap = document.createElement('div');
+    connectorNoteWrap.className = 'shrink-0 mx-4 mb-3 max-w-2xl w-full self-center hidden';
+    container.appendChild(connectorNoteWrap);
+
+    const showConnectorNote = (message, { tone = 'success' } = {}) => {
+        const border =
+            tone === 'error'
+                ? 'border-red-500/30'
+                : tone === 'info'
+                  ? 'border-primary/30'
+                  : 'border-green-500/30';
+        const text =
+            tone === 'error'
+                ? 'text-red-300'
+                : tone === 'info'
+                  ? 'text-primary'
+                  : 'text-green-300';
+        connectorNoteWrap.className = `shrink-0 mx-4 mb-3 max-w-2xl w-full self-center`;
+        connectorNoteWrap.innerHTML = `
+            <div class="bg-[#111]/90 backdrop-blur-xl border ${border} rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                <p class="text-sm ${text}">${escapeHtml(message)}</p>
+                <button type="button" id="connector-note-close"
+                    class="text-white/40 hover:text-white text-lg leading-none px-2 shrink-0">&times;</button>
+            </div>
+        `;
+        connectorNoteWrap.querySelector('#connector-note-close').onclick = () => {
+            connectorNoteWrap.classList.add('hidden');
+        };
+        connectorNoteWrap.classList.remove('hidden');
+    };
+
+    const refreshConnectorStatus = async () => {
+        if (!backendClient.isConfigured()) {
+            backendReachable = false;
+            connectorStatus = { slack: false, google: false, notion: false };
+            return connectorStatus;
+        }
+
+        const health = await backendClient.health();
+        backendReachable = health?.ok === true;
+        if (!backendReachable) {
+            connectorStatus = { slack: false, google: false, notion: false };
+            return connectorStatus;
+        }
+
+        const status = await backendClient.status();
+        if (status?.disabled) {
+            connectorStatus = { slack: false, google: false, notion: false };
+            return connectorStatus;
+        }
+
+        connectorStatus = {
+            slack: !!status.slack,
+            google: !!status.google,
+            notion: !!status.notion,
+        };
+        return connectorStatus;
+    };
+
+    const buildMergedRegistry = () => {
+        const base = buildToolRegistry();
+        if (!backendClient.isConfigured() || !backendReachable) {
+            return base;
+        }
+        const connector = buildConnectorTools(connectorStatus);
+        return {
+            definitions: [...base.definitions, ...connector.definitions],
+            handlers: { ...base.handlers, ...connector.handlers },
+        };
+    };
+
+    const CONNECTOR_PROVIDERS = [
+        { id: 'slack', label: 'Slack', description: 'Post messages to channels.' },
+        { id: 'google', label: 'Google', description: 'Drive uploads and Gmail send.' },
+        { id: 'notion', label: 'Notion', description: 'Create pages in your workspace.' },
+    ];
 
     const updateBriefPlaceholder = () => {
         if (activePersona) {
@@ -621,6 +703,100 @@ export function SupercomputerStudio() {
 
     let marketplaceTab = 'personas';
 
+    const renderConnectorsPanel = (content) => {
+        const backendUrl = backendClient.getBackendUrl();
+        const reachabilityNote = backendClient.isConfigured()
+            ? backendReachable
+                ? '<p class="text-[11px] text-green-400/80">Backend reachable — connector tools active for connected providers.</p>'
+                : '<p class="text-[11px] text-amber-400/80">Backend URL saved but server is unreachable. Check the URL and that the server is running.</p>'
+            : '<p class="text-[11px] text-white/40">Optional — leave empty to use Phase 4 behavior without connectors.</p>';
+
+        content.innerHTML = `
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Backend URL</label>
+                <div class="flex gap-2">
+                    <input type="url" id="connector-backend-url"
+                        placeholder="http://localhost:3001"
+                        value="${escapeHtml(backendUrl)}"
+                        class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
+                    <button type="button" id="connector-backend-save"
+                        class="shrink-0 bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                        ${t('common.save')}
+                    </button>
+                </div>
+                ${reachabilityNote}
+            </div>
+            <div id="connector-providers" class="flex flex-col gap-3 mt-2"></div>
+        `;
+
+        content.querySelector('#connector-backend-save').onclick = async () => {
+            const input = content.querySelector('#connector-backend-url');
+            backendClient.setBackendUrl(input.value);
+            await refreshConnectorStatus();
+            renderConnectorsPanel(content);
+        };
+
+        const providersWrap = content.querySelector('#connector-providers');
+
+        if (!backendClient.isConfigured()) {
+            const hint = document.createElement('p');
+            hint.className = 'text-[11px] text-white/40';
+            hint.textContent = 'Set a backend URL above to connect Slack, Google, or Notion.';
+            providersWrap.appendChild(hint);
+            return;
+        }
+
+        CONNECTOR_PROVIDERS.forEach((provider) => {
+            const connected = !!connectorStatus[provider.id];
+            const row = document.createElement('div');
+            row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex items-start justify-between gap-3';
+            row.innerHTML = `
+                <div class="min-w-0 flex-1">
+                    <p class="text-white text-sm font-bold">${escapeHtml(provider.label)}</p>
+                    <p class="text-[11px] text-white/50 mt-0.5">${escapeHtml(provider.description)}</p>
+                    <p class="text-[10px] mt-1 font-bold uppercase tracking-widest ${connected ? 'text-green-400' : 'text-white/30'}">
+                        ${connected ? 'Connected' : 'Not connected'}
+                    </p>
+                </div>
+                <div class="shrink-0 flex flex-col gap-1.5"></div>
+            `;
+            const actions = row.querySelector('.shrink-0');
+
+            if (connected) {
+                const disconnectBtn = document.createElement('button');
+                disconnectBtn.type = 'button';
+                disconnectBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-300 border border-red-500/30 hover:bg-red-500/20 transition-all';
+                disconnectBtn.textContent = 'Disconnect';
+                disconnectBtn.onclick = async () => {
+                    disconnectBtn.disabled = true;
+                    const res = await backendClient.disconnect(provider.id);
+                    if (res.ok) {
+                        await refreshConnectorStatus();
+                        renderConnectorsPanel(content);
+                    } else {
+                        disconnectBtn.disabled = false;
+                        showConnectorNote(res.error || 'Failed to disconnect', { tone: 'error' });
+                    }
+                };
+                actions.appendChild(disconnectBtn);
+            } else {
+                const connectBtn = document.createElement('button');
+                connectBtn.type = 'button';
+                connectBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 text-white hover:bg-primary/20 hover:text-primary hover:border-primary/30 transition-all';
+                connectBtn.textContent = 'Connect';
+                connectBtn.onclick = () => {
+                    const url = backendClient.oauthUrl(provider.id);
+                    if (url) {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                };
+                actions.appendChild(connectBtn);
+            }
+
+            providersWrap.appendChild(row);
+        });
+    };
+
     const renderMarketplaceModal = () => {
         marketplaceModal.innerHTML = `
             <div class="flex items-center justify-between gap-2 p-4 border-b border-white/10">
@@ -630,12 +806,16 @@ export function SupercomputerStudio() {
             </div>
             <div class="flex gap-1 p-2 border-b border-white/5">
                 <button type="button" data-tab="personas"
-                    class="flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'personas' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'personas' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
                     Personas
                 </button>
                 <button type="button" data-tab="skills"
-                    class="flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'skills' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'skills' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
                     Skills
+                </button>
+                <button type="button" data-tab="connectors"
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'connectors' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    Connectors
                 </button>
             </div>
             <div id="marketplace-content" class="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-3"></div>
@@ -654,7 +834,9 @@ export function SupercomputerStudio() {
 
         const content = marketplaceModal.querySelector('#marketplace-content');
 
-        if (marketplaceTab === 'personas') {
+        if (marketplaceTab === 'connectors') {
+            renderConnectorsPanel(content);
+        } else if (marketplaceTab === 'personas') {
             listMarketplacePersonas().forEach((persona) => {
                 const card = document.createElement('div');
                 card.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2';
@@ -784,7 +966,7 @@ export function SupercomputerStudio() {
 
         try {
             const provider = createProvider(selectedBrain);
-            const registry = buildToolRegistry();
+            const registry = buildMergedRegistry();
             memory.setWorking({ ...memory.getWorking(), brain: selectedBrain });
             const agent = new Agent({
                 provider,
@@ -836,6 +1018,30 @@ export function SupercomputerStudio() {
     bar.appendChild(bottomRow);
     inputWrap.appendChild(bar);
     container.appendChild(inputWrap);
+
+    (async () => {
+        if (backendClient.isConfigured()) {
+            await refreshConnectorStatus();
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const connected = params.get('connected');
+        const oauthError = params.get('oauth_error');
+
+        if (connected) {
+            await refreshConnectorStatus();
+            const label = CONNECTOR_PROVIDERS.find((p) => p.id === connected)?.label || connected;
+            showConnectorNote(`${label} connected successfully.`, { tone: 'success' });
+            const url = new URL(window.location.href);
+            url.searchParams.delete('connected');
+            window.history.replaceState({}, '', url);
+        } else if (oauthError) {
+            showConnectorNote(`OAuth failed: ${oauthError}`, { tone: 'error' });
+            const url = new URL(window.location.href);
+            url.searchParams.delete('oauth_error');
+            window.history.replaceState({}, '', url);
+        }
+    })();
 
     return container;
 }
