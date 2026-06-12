@@ -14,14 +14,22 @@ module.exports = {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#22d3ee',
+                    DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
                     hover: '#06b6d4',
                 },
-                'app-bg': '#050505',
-                'panel-bg': '#0a0a0a',
-                'card-bg': '#141414',
-                secondary: '#a1a1aa',
-                muted: '#52525b',
+                'app-bg': 'rgb(var(--bg) / <alpha-value>)',
+                'panel-bg': 'rgb(var(--surface) / <alpha-value>)',
+                'card-bg': 'rgb(var(--surface) / <alpha-value>)',
+                secondary: 'rgb(var(--text-dim) / <alpha-value>)',
+                muted: 'rgb(var(--text-muted) / <alpha-value>)',
+                bg: 'rgb(var(--bg) / <alpha-value>)',
+                surface: 'rgb(var(--surface) / <alpha-value>)',
+                'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
+                'border-token': 'rgb(var(--border) / <alpha-value>)',
+                fg: 'rgb(var(--text) / <alpha-value>)',
+                dim: 'rgb(var(--text-dim) / <alpha-value>)',
+                accent: 'rgb(var(--accent) / <alpha-value>)',
+                'accent-contrast': 'rgb(var(--accent-contrast) / <alpha-value>)',
             },
             fontFamily: {
                 sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
@@ -32,7 +40,7 @@ module.exports = {
                 '3xl': '2rem',
             },
             boxShadow: {
-                'glow': '0 0 20px rgba(34, 211, 238, 0.4)',
+                'glow': '0 0 20px rgb(var(--glow) / 0.4)',
                 'glow-accent': '0 0 20px rgba(168, 85, 247, 0.4)',
                 '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.8)',
             }

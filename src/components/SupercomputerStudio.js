@@ -38,19 +38,19 @@ function formatArgs(args) {
 
 export function SupercomputerStudio() {
     const container = document.createElement('div');
-    container.className = 'w-full h-full flex flex-col bg-app-bg relative overflow-hidden';
+    container.className = 'w-full h-full flex flex-col bg-bg relative overflow-hidden';
 
     let running = false;
 
     // --- Hero ---
     const hero = document.createElement('div');
-    hero.className = 'shrink-0 flex flex-col items-center pt-8 pb-4 px-4 animate-fade-in-up';
+    hero.className = 'shrink-0 flex flex-col items-center pt-8 pb-4 px-4 animate-fade-in-up text-fg';
     hero.innerHTML = `
         <div class="mb-4 relative">
-            <div class="absolute inset-0 bg-primary/20 blur-[80px] rounded-full opacity-40"></div>
-            <div class="relative w-16 h-16 bg-teal-900/40 rounded-2xl flex items-center justify-center border border-white/5">
-                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shadow-glow">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary">
+            <div class="absolute inset-0 bg-accent/20 blur-[80px] rounded-full opacity-40"></div>
+            <div class="relative w-16 h-16 bg-teal-900/40 rounded-2xl flex items-center justify-center border border-border-token">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/20 shadow-glow">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-accent">
                         <path d="M12 2a4 4 0 014 4v1h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a4 4 0 014-4z"/>
                         <circle cx="9" cy="13" r="1" fill="currentColor"/>
                         <circle cx="15" cy="13" r="1" fill="currentColor"/>
@@ -58,7 +58,7 @@ export function SupercomputerStudio() {
                 </div>
             </div>
         </div>
-        <h1 class="text-2xl md:text-4xl font-black text-white tracking-widest uppercase mb-1 text-center">${t('nav.supercomputer')}</h1>
+        <h1 class="text-2xl md:text-4xl font-black tracking-widest uppercase mb-1 text-center">${t('nav.supercomputer')}</h1>
         <p class="text-secondary text-sm font-medium opacity-60 text-center">Describe a creative brief — the agent plans and runs generation tools for you.</p>
     `;
     container.appendChild(hero);
@@ -92,20 +92,20 @@ export function SupercomputerStudio() {
             tone === 'error'
                 ? 'border-red-500/30'
                 : tone === 'info'
-                  ? 'border-primary/30'
+                  ? 'border-accent/30'
                   : 'border-green-500/30';
         const text =
             tone === 'error'
                 ? 'text-red-300'
                 : tone === 'info'
-                  ? 'text-primary'
+                  ? 'text-accent'
                   : 'text-green-300';
         connectorNoteWrap.className = `shrink-0 mx-4 mb-3 max-w-2xl w-full self-center`;
         connectorNoteWrap.innerHTML = `
-            <div class="bg-[#111]/90 backdrop-blur-xl border ${border} rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <div class="bg-surface/90 backdrop-blur-xl border ${border} rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
                 <p class="text-sm ${text}">${escapeHtml(message)}</p>
                 <button type="button" id="connector-note-close"
-                    class="text-white/40 hover:text-white text-lg leading-none px-2 shrink-0">&times;</button>
+                    class="text-muted hover:text-fg text-lg leading-none px-2 shrink-0">&times;</button>
             </div>
         `;
         connectorNoteWrap.querySelector('#connector-note-close').onclick = () => {
@@ -188,16 +188,16 @@ export function SupercomputerStudio() {
     const renderBrandPanel = () => {
         const brand = memory.getBrand();
         brandPanelWrap.innerHTML = `
-            <div class="bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+            <div class="bg-surface/90 backdrop-blur-xl border border-border-token rounded-2xl p-4 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-xs font-bold text-primary uppercase tracking-wider">Brand memory</p>
+                    <p class="text-xs font-bold text-accent uppercase tracking-wider">Brand memory</p>
                     <button type="button" id="brand-panel-close"
-                        class="text-white/40 hover:text-white text-lg leading-none px-2">&times;</button>
+                        class="text-muted hover:text-fg text-lg leading-none px-2">&times;</button>
                 </div>
-                <p class="text-[11px] text-white/40">Saved locally — steers every agent run via system prompt.</p>
+                <p class="text-[11px] text-muted">Saved locally — steers every agent run via system prompt.</p>
                 <div class="flex flex-col gap-3" id="brand-fields"></div>
                 <button type="button" id="brand-save"
-                    class="self-end bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                    class="self-end bg-accent text-accent-contrast font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
                     ${t('common.save')}
                 </button>
             </div>
@@ -209,10 +209,10 @@ export function SupercomputerStudio() {
             const group = document.createElement('div');
             group.className = 'flex flex-col gap-1';
             group.innerHTML = `
-                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">${escapeHtml(label)}</label>
+                <label class="text-[10px] font-bold text-muted uppercase tracking-widest">${escapeHtml(label)}</label>
                 <textarea data-brand-key="${key}" rows="2"
                     placeholder="${escapeHtml(placeholder)}"
-                    class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50 resize-none custom-scrollbar">${escapeHtml(brand[key] || '')}</textarea>
+                    class="w-full bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50 resize-none custom-scrollbar">${escapeHtml(brand[key] || '')}</textarea>
             `;
             fieldEls[key] = group.querySelector('textarea');
             fieldsWrap.appendChild(group);
@@ -283,17 +283,17 @@ export function SupercomputerStudio() {
         const copy = KEY_BANNER_COPY[meta.id] || KEY_BANNER_COPY.claude;
         keyBanner.classList.remove('hidden');
         keyBanner.innerHTML = `
-            <div class="bg-[#111]/90 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div class="bg-surface/90 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div class="flex-1 min-w-0">
                     <p class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">${copy.title}</p>
-                    <p class="text-[11px] text-white/50">${copy.hint}</p>
+                    <p class="text-[11px] text-muted">${copy.hint}</p>
                 </div>
                 <div class="flex gap-2 flex-1 sm:max-w-md">
                     <input type="password" id="brain-key-input"
                         placeholder="${copy.placeholder}"
-                        class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
+                        class="flex-1 bg-surface-2 border border-border-token rounded-xl px-4 py-2.5 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
                     <button id="brain-key-save"
-                        class="shrink-0 bg-primary text-black font-bold px-4 py-2.5 rounded-xl text-sm hover:shadow-glow transition-all">
+                        class="shrink-0 bg-accent text-accent-contrast font-bold px-4 py-2.5 rounded-xl text-sm hover:shadow-glow transition-all">
                         ${t('common.save')}
                     </button>
                 </div>
@@ -326,7 +326,7 @@ export function SupercomputerStudio() {
     };
 
     const emptyHint = document.createElement('p');
-    emptyHint.className = 'text-center text-white/25 text-sm py-8';
+    emptyHint.className = 'text-center text-muted text-sm py-8';
     emptyHint.textContent = 'Your agent transcript will appear here.';
     transcript.appendChild(emptyHint);
 
@@ -340,7 +340,7 @@ export function SupercomputerStudio() {
         const row = document.createElement('div');
         row.className = 'flex justify-end';
         row.innerHTML = `
-            <div class="max-w-[85%] bg-primary/20 border border-primary/30 rounded-2xl rounded-br-md px-4 py-3 text-white text-sm leading-relaxed">
+            <div class="max-w-[85%] bg-accent/20 border border-accent/30 rounded-2xl rounded-br-md px-4 py-3 text-fg text-sm leading-relaxed">
                 ${escapeHtml(text)}
             </div>
         `;
@@ -351,7 +351,7 @@ export function SupercomputerStudio() {
         const row = document.createElement('div');
         row.className = 'flex justify-start';
         row.innerHTML = `
-            <div class="max-w-[85%] bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-3 text-white/90 text-sm leading-relaxed whitespace-pre-wrap">
+            <div class="max-w-[85%] bg-surface-2 border border-border-token rounded-2xl rounded-bl-md px-4 py-3 text-fg/90 text-sm leading-relaxed whitespace-pre-wrap">
                 ${escapeHtml(text)}
             </div>
         `;
@@ -360,26 +360,26 @@ export function SupercomputerStudio() {
 
     const appendPlanBlock = (text, toolCalls, { awaitingApproval = false, onApprove, onCancel } = {}) => {
         const block = document.createElement('div');
-        block.className = 'bg-[#111]/80 backdrop-blur border border-white/10 rounded-2xl p-4 flex flex-col gap-3';
+        block.className = 'bg-surface/80 backdrop-blur border border-border-token rounded-2xl p-4 flex flex-col gap-3';
         if (text) {
             const planText = document.createElement('p');
-            planText.className = 'text-sm text-white/80 whitespace-pre-wrap leading-relaxed';
+            planText.className = 'text-sm text-fg/80 whitespace-pre-wrap leading-relaxed';
             planText.textContent = text;
             block.appendChild(planText);
         }
         if (toolCalls?.length) {
             const label = document.createElement('p');
-            label.className = 'text-[10px] font-bold text-primary uppercase tracking-widest';
+            label.className = 'text-[10px] font-bold text-accent uppercase tracking-widest';
             label.textContent = awaitingApproval ? 'Approve plan before running tools' : 'Pending tool calls';
             block.appendChild(label);
             const list = document.createElement('ul');
             list.className = 'flex flex-col gap-2';
             toolCalls.forEach((tc) => {
                 const item = document.createElement('li');
-                item.className = 'bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs font-mono';
+                item.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-xs font-mono';
                 item.innerHTML = `
-                    <span class="text-primary font-bold">${escapeHtml(tc.name)}</span>
-                    <pre class="text-white/50 mt-1 whitespace-pre-wrap break-all text-[10px]">${escapeHtml(formatArgs(tc.args))}</pre>
+                    <span class="text-accent font-bold">${escapeHtml(tc.name)}</span>
+                    <pre class="text-muted mt-1 whitespace-pre-wrap break-all text-[10px]">${escapeHtml(formatArgs(tc.args))}</pre>
                 `;
                 list.appendChild(item);
             });
@@ -387,17 +387,17 @@ export function SupercomputerStudio() {
         }
         if (awaitingApproval) {
             const costNote = document.createElement('p');
-            costNote.className = 'text-[11px] text-white/40';
+            costNote.className = 'text-[11px] text-muted';
             costNote.textContent = 'Cost shown on the provider';
             block.appendChild(costNote);
 
             const actions = document.createElement('div');
             actions.className = 'flex gap-2 pt-1';
             const approveBtn = document.createElement('button');
-            approveBtn.className = 'bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all';
+            approveBtn.className = 'bg-accent text-accent-contrast font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all';
             approveBtn.textContent = 'Approve';
             const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'bg-white/10 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-white/15 transition-all';
+            cancelBtn.className = 'bg-surface-2 text-fg font-bold px-4 py-2 rounded-xl text-sm hover:bg-surface-2 transition-all';
             cancelBtn.textContent = 'Cancel';
             approveBtn.onclick = () => {
                 approveBtn.disabled = true;
@@ -419,18 +419,18 @@ export function SupercomputerStudio() {
 
     const appendToolStart = (name) => {
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-2 text-sm text-white/50 px-2';
-        row.innerHTML = `<span class="animate-spin text-primary">◌</span> running <span class="text-primary font-bold">${escapeHtml(name)}</span>…`;
+        row.className = 'flex items-center gap-2 text-sm text-muted px-2';
+        row.innerHTML = `<span class="animate-spin text-accent">◌</span> running <span class="text-accent font-bold">${escapeHtml(name)}</span>…`;
         appendRow(row);
     };
 
     const appendToolResult = (name, result) => {
         const block = document.createElement('div');
-        block.className = 'bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col gap-2';
+        block.className = 'bg-surface-2 border border-border-token rounded-2xl p-3 flex flex-col gap-2';
 
         const header = document.createElement('p');
         header.className = 'text-[10px] font-bold uppercase tracking-widest';
-        header.innerHTML = `<span class="text-white/40">${escapeHtml(name)}</span> → `;
+        header.innerHTML = `<span class="text-muted">${escapeHtml(name)}</span> → `;
 
         if (result?.ok && result.url) {
             header.innerHTML += '<span class="text-green-400">ok</span>';
@@ -440,20 +440,20 @@ export function SupercomputerStudio() {
                 const video = document.createElement('video');
                 video.src = result.url;
                 video.controls = true;
-                video.className = 'max-h-48 rounded-xl border border-white/10';
+                video.className = 'max-h-48 rounded-xl border border-border-token';
                 block.appendChild(video);
             } else if (isImageUrl(result.url)) {
                 const img = document.createElement('img');
                 img.src = result.url;
                 img.alt = name;
-                img.className = 'max-h-48 rounded-xl border border-white/10 object-contain';
+                img.className = 'max-h-48 rounded-xl border border-border-token object-contain';
                 block.appendChild(img);
             } else {
                 const link = document.createElement('a');
                 link.href = result.url;
                 link.target = '_blank';
                 link.rel = 'noreferrer';
-                link.className = 'text-xs text-primary hover:underline break-all';
+                link.className = 'text-xs text-accent hover:underline break-all';
                 link.textContent = result.url;
                 block.appendChild(link);
             }
@@ -489,8 +489,8 @@ export function SupercomputerStudio() {
         const row = document.createElement('div');
         row.className = 'flex justify-start';
         row.innerHTML = `
-            <div class="max-w-[85%] bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3 text-white text-sm leading-relaxed whitespace-pre-wrap">
-                <span class="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1">Done</span>
+            <div class="max-w-[85%] bg-accent/10 border border-accent/20 rounded-2xl px-4 py-3 text-fg text-sm leading-relaxed whitespace-pre-wrap">
+                <span class="text-[10px] font-bold text-accent uppercase tracking-widest block mb-1">Done</span>
                 ${escapeHtml(text)}
             </div>
         `;
@@ -537,13 +537,13 @@ export function SupercomputerStudio() {
 
     // --- Input bar ---
     const inputWrap = document.createElement('div');
-    inputWrap.className = 'shrink-0 p-4 md:p-6 border-t border-white/5 bg-black/40 backdrop-blur-md';
+    inputWrap.className = 'shrink-0 p-4 md:p-6 border-t border-border-token bg-surface-2 backdrop-blur-md';
 
     const bar = document.createElement('div');
-    bar.className = 'max-w-3xl mx-auto w-full bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-3 md:p-4 flex flex-col gap-3 shadow-3xl';
+    bar.className = 'max-w-3xl mx-auto w-full bg-surface/90 backdrop-blur-xl border border-border-token rounded-[1.5rem] md:rounded-[2rem] p-3 md:p-4 flex flex-col gap-3 shadow-3xl';
 
     const textarea = document.createElement('textarea');
-    textarea.className = 'w-full bg-transparent border-none text-white text-base md:text-lg placeholder:text-muted focus:outline-none resize-none leading-relaxed min-h-[48px] max-h-[150px] overflow-y-auto custom-scrollbar px-2';
+    textarea.className = 'w-full bg-transparent border-none text-fg md:text-lg placeholder:text-muted focus:outline-none resize-none leading-relaxed min-h-[48px] max-h-[150px] overflow-y-auto custom-scrollbar px-2';
     textarea.rows = 1;
     textarea.oninput = () => {
         textarea.style.height = 'auto';
@@ -551,7 +551,7 @@ export function SupercomputerStudio() {
     };
 
     const bottomRow = document.createElement('div');
-    bottomRow.className = 'flex items-center justify-between gap-3 px-2 pt-2 border-t border-white/5';
+    bottomRow.className = 'flex items-center justify-between gap-3 px-2 pt-2 border-t border-border-token';
 
     const leftControls = document.createElement('div');
     leftControls.className = 'flex items-center gap-2 flex-wrap';
@@ -559,7 +559,7 @@ export function SupercomputerStudio() {
     const brandBtn = document.createElement('button');
     brandBtn.type = 'button';
     brandBtn.title = 'Brand memory';
-    brandBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    brandBtn.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-dim text-xs font-bold uppercase tracking-wider hover:border-accent/50 hover:text-fg transition-all';
     brandBtn.textContent = '⚙ Brand';
     brandBtn.onclick = toggleBrandPanel;
 
@@ -568,14 +568,14 @@ export function SupercomputerStudio() {
 
     const skillsBtn = document.createElement('button');
     skillsBtn.type = 'button';
-    skillsBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    skillsBtn.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-dim text-xs font-bold uppercase tracking-wider hover:border-accent/50 hover:text-fg transition-all';
     skillsBtn.textContent = 'Skills';
 
     const skillsMenu = document.createElement('div');
-    skillsMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-3xl z-50';
+    skillsMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-surface/95 backdrop-blur-xl border border-border-token rounded-2xl p-2 shadow-3xl z-50';
 
     const skillsHint = document.createElement('p');
-    skillsHint.className = 'text-[10px] text-white/40 px-2 py-1 border-b border-white/5 mb-1';
+    skillsHint.className = 'text-[10px] text-muted px-2 py-1 border-b border-border-token mb-1';
     skillsHint.textContent = 'Type /trigger in your brief to invoke a skill';
     skillsMenu.appendChild(skillsHint);
 
@@ -589,10 +589,10 @@ export function SupercomputerStudio() {
         skills.forEach((skill) => {
             const item = document.createElement('button');
             item.type = 'button';
-            item.className = 'w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all';
+            item.className = 'w-full text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-all';
             item.innerHTML = `
-                <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
-                <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(skill.description)}</span>
+                <span class="text-accent font-bold text-xs">${escapeHtml(skill.trigger)}</span>
+                <span class="block text-[11px] text-muted mt-0.5">${escapeHtml(skill.description)}</span>
             `;
             item.onclick = () => {
                 const current = textarea.value.trim();
@@ -621,7 +621,7 @@ export function SupercomputerStudio() {
 
     const marketplaceBtn = document.createElement('button');
     marketplaceBtn.type = 'button';
-    marketplaceBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold uppercase tracking-wider hover:border-primary/50 hover:text-white transition-all';
+    marketplaceBtn.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-dim text-xs font-bold uppercase tracking-wider hover:border-accent/50 hover:text-fg transition-all';
     marketplaceBtn.textContent = 'Marketplace';
     leftControls.appendChild(marketplaceBtn);
 
@@ -630,11 +630,11 @@ export function SupercomputerStudio() {
 
     const personaBtn = document.createElement('button');
     personaBtn.type = 'button';
-    personaBtn.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-xs font-bold tracking-wider hover:border-primary/50 hover:text-white transition-all flex items-center gap-1.5 max-w-[11rem] truncate';
+    personaBtn.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-dim text-xs font-bold tracking-wider hover:border-accent/50 hover:text-fg transition-all flex items-center gap-1.5 max-w-[11rem] truncate';
     personaBtn.title = 'Active persona';
 
     const personaMenu = document.createElement('div');
-    personaMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-3xl z-50';
+    personaMenu.className = 'hidden absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto custom-scrollbar bg-surface/95 backdrop-blur-xl border border-border-token rounded-2xl p-2 shadow-3xl z-50';
 
     const renderPersonaBtn = () => {
         if (activePersona) {
@@ -647,14 +647,14 @@ export function SupercomputerStudio() {
     const renderPersonaMenu = () => {
         personaMenu.innerHTML = '';
         const hint = document.createElement('p');
-        hint.className = 'text-[10px] text-white/40 px-2 py-1 border-b border-white/5 mb-1';
+        hint.className = 'text-[10px] text-muted px-2 py-1 border-b border-border-token mb-1';
         hint.textContent = 'Select an AI employee persona';
         personaMenu.appendChild(hint);
 
         const noneItem = document.createElement('button');
         noneItem.type = 'button';
-        noneItem.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all ${!activePersona ? 'bg-primary/10 border border-primary/20' : ''}`;
-        noneItem.innerHTML = '<span class="text-white/70 text-xs font-bold">No persona</span>';
+        noneItem.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-all ${!activePersona ? 'bg-accent/10 border border-accent/20' : ''}`;
+        noneItem.innerHTML = '<span class="text-dim text-xs font-bold">No persona</span>';
         noneItem.onclick = () => {
             clearActivePersona();
             activePersona = null;
@@ -668,10 +668,10 @@ export function SupercomputerStudio() {
             const item = document.createElement('button');
             item.type = 'button';
             const isActive = activePersona?.id === persona.id;
-            item.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all ${isActive ? 'bg-primary/10 border border-primary/20' : ''}`;
+            item.className = `w-full text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-all ${isActive ? 'bg-accent/10 border border-accent/20' : ''}`;
             item.innerHTML = `
-                <span class="text-white text-xs font-bold">${persona.emoji} ${escapeHtml(persona.name)}</span>
-                <span class="block text-[11px] text-white/50 mt-0.5">${escapeHtml(persona.tagline)}</span>
+                <span class="text-fg text-xs font-bold">${persona.emoji} ${escapeHtml(persona.name)}</span>
+                <span class="block text-[11px] text-muted mt-0.5">${escapeHtml(persona.tagline)}</span>
             `;
             item.onclick = () => {
                 setActivePersona(persona.id);
@@ -696,10 +696,10 @@ export function SupercomputerStudio() {
     personaWrap.appendChild(personaMenu);
 
     const marketplaceOverlay = document.createElement('div');
-    marketplaceOverlay.className = 'hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';
+    marketplaceOverlay.className = 'hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-bg/60 backdrop-blur-sm';
 
     const marketplaceModal = document.createElement('div');
-    marketplaceModal.className = 'bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-3xl';
+    marketplaceModal.className = 'bg-surface/95 backdrop-blur-xl border border-border-token rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-3xl';
 
     let marketplaceTab = 'personas';
 
@@ -720,12 +720,12 @@ export function SupercomputerStudio() {
 
     const renderSchedulesPanel = async (content) => {
         content.innerHTML = `
-            <p class="text-[11px] text-white/40 leading-relaxed">
+            <p class="text-[11px] text-muted leading-relaxed">
                 Run creative briefs on a cron while the client is closed. Requires server-side
-                <span class="text-white/60">MUAPI_KEY</span> and brain keys (<span class="text-white/60">ANTHROPIC_KEY</span> / <span class="text-white/60">OPENAI_KEY</span> / <span class="text-white/60">GEMINI_KEY</span>) in the connector server <code class="text-primary/80">.env</code>.
-                Telegram briefs use the same keys via <span class="text-white/60">TELEGRAM_BOT_TOKEN</span>.
+                <span class="text-dim">MUAPI_KEY</span> and brain keys (<span class="text-dim">ANTHROPIC_KEY</span> / <span class="text-dim">OPENAI_KEY</span> / <span class="text-dim">GEMINI_KEY</span>) in the connector server <code class="text-accent/80">.env</code>.
+                Telegram briefs use the same keys via <span class="text-dim">TELEGRAM_BOT_TOKEN</span>.
             </p>
-            <div id="schedules-create" class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-3"></div>
+            <div id="schedules-create" class="bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-3"></div>
             <div id="schedules-list" class="flex flex-col gap-2"></div>
         `;
 
@@ -733,37 +733,37 @@ export function SupercomputerStudio() {
         const listWrap = content.querySelector('#schedules-list');
 
         if (!backendClient.isConfigured()) {
-            listWrap.innerHTML = '<p class="text-[11px] text-white/40">Set a backend URL in the Connectors tab to manage schedules.</p>';
+            listWrap.innerHTML = '<p class="text-[11px] text-muted">Set a backend URL in the Connectors tab to manage schedules.</p>';
             createWrap.classList.add('hidden');
             return;
         }
 
         createWrap.innerHTML = `
-            <p class="text-[10px] font-bold text-primary uppercase tracking-wider">New schedule</p>
+            <p class="text-[10px] font-bold text-accent uppercase tracking-wider">New schedule</p>
             <input type="text" id="schedule-name" placeholder="Schedule name"
-                class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
+                class="w-full bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
             <textarea id="schedule-brief" rows="2" placeholder="Creative brief to run on schedule…"
-                class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50 resize-none custom-scrollbar"></textarea>
+                class="w-full bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50 resize-none custom-scrollbar"></textarea>
             <div class="flex flex-col gap-1.5">
-                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cron</label>
+                <label class="text-[10px] font-bold text-muted uppercase tracking-widest">Cron</label>
                 <input type="text" id="schedule-cron" value="0 9 * * *"
-                    class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-primary/50">
+                    class="w-full bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-sm font-mono focus:outline-none focus:border-accent/50">
                 <div class="flex flex-wrap gap-1.5" id="schedule-cron-presets"></div>
             </div>
             <div class="flex items-center gap-3 flex-wrap">
-                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Brain</label>
+                <label class="text-[10px] font-bold text-muted uppercase tracking-widest">Brain</label>
                 <select id="schedule-brain"
-                    class="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer">
+                    class="bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-accent/50 cursor-pointer">
                     ${PROVIDERS.map((p) => `<option value="${p.id}">${escapeHtml(p.label)}</option>`).join('')}
                 </select>
-                <label class="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+                <label class="flex items-center gap-2 text-xs text-dim cursor-pointer">
                     <input type="checkbox" id="schedule-enabled" checked
-                        class="rounded border-white/20 bg-black/40 text-primary focus:ring-primary/50">
+                        class="rounded border-border-token bg-surface-2 text-accent focus:ring-accent/50">
                     Enabled
                 </label>
             </div>
             <button type="button" id="schedule-create-btn"
-                class="self-end bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                class="self-end bg-accent text-accent-contrast font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
                 Create schedule
             </button>
         `;
@@ -773,7 +773,7 @@ export function SupercomputerStudio() {
         CRON_PRESETS.forEach(({ label, cron }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 hover:bg-primary/20 hover:text-primary transition-all';
+            btn.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-surface-2 text-dim hover:bg-accent/20 hover:text-accent transition-all';
             btn.textContent = label;
             btn.onclick = () => {
                 cronInput.value = cron;
@@ -782,11 +782,11 @@ export function SupercomputerStudio() {
         });
 
         const renderScheduleList = async () => {
-            listWrap.innerHTML = '<p class="text-[11px] text-white/40 py-2">Loading schedules…</p>';
+            listWrap.innerHTML = '<p class="text-[11px] text-muted py-2">Loading schedules…</p>';
             const schedules = await backendClient.listSchedules();
 
             if (schedules?.disabled) {
-                listWrap.innerHTML = '<p class="text-[11px] text-white/40">Backend not configured.</p>';
+                listWrap.innerHTML = '<p class="text-[11px] text-muted">Backend not configured.</p>';
                 return;
             }
 
@@ -797,7 +797,7 @@ export function SupercomputerStudio() {
 
             const items = Array.isArray(schedules) ? schedules : [];
             if (!items.length) {
-                listWrap.innerHTML = '<p class="text-[11px] text-white/40 py-2">No schedules yet.</p>';
+                listWrap.innerHTML = '<p class="text-[11px] text-muted py-2">No schedules yet.</p>';
                 return;
             }
 
@@ -805,32 +805,32 @@ export function SupercomputerStudio() {
             items.forEach((schedule) => {
                 const lastOk = schedule.lastStatus?.ok;
                 const statusClass =
-                    lastOk === true ? 'text-green-400' : lastOk === false ? 'text-red-400' : 'text-white/30';
+                    lastOk === true ? 'text-green-400' : lastOk === false ? 'text-red-400' : 'text-muted';
                 const statusLabel =
                     lastOk === true ? 'OK' : lastOk === false ? 'Failed' : '—';
 
                 const row = document.createElement('div');
-                row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2';
+                row.className = 'bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-2';
                 row.innerHTML = `
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
-                            <p class="text-white text-sm font-bold">${escapeHtml(schedule.name)}</p>
-                            <p class="text-[11px] text-white/50 mt-0.5 font-mono">${escapeHtml(schedule.cron)}</p>
-                            <p class="text-[10px] text-white/40 mt-1">
-                                Brain: <span class="text-white/60">${escapeHtml(schedule.brain || 'claude')}</span>
+                            <p class="text-fg text-sm font-bold">${escapeHtml(schedule.name)}</p>
+                            <p class="text-[11px] text-muted mt-0.5 font-mono">${escapeHtml(schedule.cron)}</p>
+                            <p class="text-[10px] text-muted mt-1">
+                                Brain: <span class="text-dim">${escapeHtml(schedule.brain || 'claude')}</span>
                                 · Last run: ${escapeHtml(formatLastRun(schedule.lastRun))}
                                 · <span class="${statusClass} font-bold uppercase">${statusLabel}</span>
                             </p>
                         </div>
-                        <label class="flex items-center gap-1.5 shrink-0 text-[10px] text-white/50 cursor-pointer">
-                            <input type="checkbox" class="schedule-enabled-toggle rounded border-white/20 bg-black/40 text-primary"
+                        <label class="flex items-center gap-1.5 shrink-0 text-[10px] text-muted cursor-pointer">
+                            <input type="checkbox" class="schedule-enabled-toggle rounded border-border-token bg-surface-2 text-accent"
                                 data-id="${escapeHtml(schedule.id)}" ${schedule.enabled ? 'checked' : ''}>
                             On
                         </label>
                     </div>
-                    <p class="text-[11px] text-white/40 line-clamp-2">${escapeHtml(schedule.brief)}</p>
+                    <p class="text-[11px] text-muted line-clamp-2">${escapeHtml(schedule.brief)}</p>
                     <div class="flex gap-2 flex-wrap">
-                        <button type="button" class="schedule-run-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all"
+                        <button type="button" class="schedule-run-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition-all"
                             data-id="${escapeHtml(schedule.id)}">Run now</button>
                         <button type="button" class="schedule-delete-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-300 border border-red-500/30 hover:bg-red-500/20 transition-all"
                             data-id="${escapeHtml(schedule.id)}">Delete</button>
@@ -922,18 +922,18 @@ export function SupercomputerStudio() {
             ? backendReachable
                 ? '<p class="text-[11px] text-green-400/80">Backend reachable — connector tools active for connected providers.</p>'
                 : '<p class="text-[11px] text-amber-400/80">Backend URL saved but server is unreachable. Check the URL and that the server is running.</p>'
-            : '<p class="text-[11px] text-white/40">Optional — leave empty to use Phase 4 behavior without connectors.</p>';
+            : '<p class="text-[11px] text-muted">Optional — leave empty to use Phase 4 behavior without connectors.</p>';
 
         content.innerHTML = `
             <div class="flex flex-col gap-2">
-                <label class="text-[10px] font-bold text-white/50 uppercase tracking-widest">Backend URL</label>
+                <label class="text-[10px] font-bold text-muted uppercase tracking-widest">Backend URL</label>
                 <div class="flex gap-2">
                     <input type="url" id="connector-backend-url"
                         placeholder="http://localhost:3001"
                         value="${escapeHtml(backendUrl)}"
-                        class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm placeholder:text-muted focus:outline-none focus:border-primary/50">
+                        class="flex-1 bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-sm placeholder:text-muted focus:outline-none focus:border-accent/50">
                     <button type="button" id="connector-backend-save"
-                        class="shrink-0 bg-primary text-black font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
+                        class="shrink-0 bg-accent text-accent-contrast font-bold px-4 py-2 rounded-xl text-sm hover:shadow-glow transition-all">
                         ${t('common.save')}
                     </button>
                 </div>
@@ -953,7 +953,7 @@ export function SupercomputerStudio() {
 
         if (!backendClient.isConfigured()) {
             const hint = document.createElement('p');
-            hint.className = 'text-[11px] text-white/40';
+            hint.className = 'text-[11px] text-muted';
             hint.textContent = 'Set a backend URL above to connect Slack, Google, or Notion.';
             providersWrap.appendChild(hint);
             return;
@@ -962,12 +962,12 @@ export function SupercomputerStudio() {
         CONNECTOR_PROVIDERS.forEach((provider) => {
             const connected = !!connectorStatus[provider.id];
             const row = document.createElement('div');
-            row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex items-start justify-between gap-3';
+            row.className = 'bg-surface-2 border border-border-token rounded-xl p-3 flex items-start justify-between gap-3';
             row.innerHTML = `
                 <div class="min-w-0 flex-1">
-                    <p class="text-white text-sm font-bold">${escapeHtml(provider.label)}</p>
-                    <p class="text-[11px] text-white/50 mt-0.5">${escapeHtml(provider.description)}</p>
-                    <p class="text-[10px] mt-1 font-bold uppercase tracking-widest ${connected ? 'text-green-400' : 'text-white/30'}">
+                    <p class="text-fg text-sm font-bold">${escapeHtml(provider.label)}</p>
+                    <p class="text-[11px] text-muted mt-0.5">${escapeHtml(provider.description)}</p>
+                    <p class="text-[10px] mt-1 font-bold uppercase tracking-widest ${connected ? 'text-green-400' : 'text-muted'}">
                         ${connected ? 'Connected' : 'Not connected'}
                     </p>
                 </div>
@@ -995,7 +995,7 @@ export function SupercomputerStudio() {
             } else {
                 const connectBtn = document.createElement('button');
                 connectBtn.type = 'button';
-                connectBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 text-white hover:bg-primary/20 hover:text-primary hover:border-primary/30 transition-all';
+                connectBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-2 text-fg hover:bg-accent/20 hover:text-accent hover:border-accent/30 transition-all';
                 connectBtn.textContent = 'Connect';
                 connectBtn.onclick = () => {
                     const url = backendClient.oauthUrl(provider.id);
@@ -1012,26 +1012,26 @@ export function SupercomputerStudio() {
 
     const renderMarketplaceModal = () => {
         marketplaceModal.innerHTML = `
-            <div class="flex items-center justify-between gap-2 p-4 border-b border-white/10">
-                <p class="text-xs font-bold text-primary uppercase tracking-wider">Marketplace</p>
+            <div class="flex items-center justify-between gap-2 p-4 border-b border-border-token">
+                <p class="text-xs font-bold text-accent uppercase tracking-wider">Marketplace</p>
                 <button type="button" id="marketplace-close"
-                    class="text-white/40 hover:text-white text-lg leading-none px-2">&times;</button>
+                    class="text-muted hover:text-fg text-lg leading-none px-2">&times;</button>
             </div>
-            <div class="flex gap-1 p-2 border-b border-white/5">
+            <div class="flex gap-1 p-2 border-b border-border-token">
                 <button type="button" data-tab="personas"
-                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'personas' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'personas' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
                     Personas
                 </button>
                 <button type="button" data-tab="skills"
-                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'skills' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'skills' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
                     Skills
                 </button>
                 <button type="button" data-tab="connectors"
-                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'connectors' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'connectors' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
                     Connectors
                 </button>
                 <button type="button" data-tab="schedules"
-                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'schedules' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/5'}">
+                    class="flex-1 px-2 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${marketplaceTab === 'schedules' ? 'bg-accent/20 text-accent border border-accent/30' : 'text-muted hover:text-fg hover:bg-surface-2'}">
                     Schedules
                 </button>
             </div>
@@ -1058,21 +1058,21 @@ export function SupercomputerStudio() {
         } else if (marketplaceTab === 'personas') {
             listMarketplacePersonas().forEach((persona) => {
                 const card = document.createElement('div');
-                card.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2';
+                card.className = 'bg-surface-2 border border-border-token rounded-xl p-3 flex flex-col gap-2';
                 const skillTags = (persona.skills || [])
-                    .map((s) => `<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-bold">${escapeHtml(s)}</span>`)
+                    .map((s) => `<span class="text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-lg font-bold">${escapeHtml(s)}</span>`)
                     .join(' ');
                 card.innerHTML = `
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
-                            <p class="text-white text-sm font-bold">${persona.emoji} ${escapeHtml(persona.name)}</p>
-                            <p class="text-[11px] text-white/50 mt-0.5">${escapeHtml(persona.tagline)}</p>
+                            <p class="text-fg text-sm font-bold">${persona.emoji} ${escapeHtml(persona.name)}</p>
+                            <p class="text-[11px] text-muted mt-0.5">${escapeHtml(persona.tagline)}</p>
                         </div>
-                        <button type="button" class="persona-activate shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${persona.active ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' : 'bg-white/10 text-white hover:bg-white/15'}">
+                        <button type="button" class="persona-activate shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${persona.active ? 'bg-accent/20 text-accent border border-accent/30 cursor-default' : 'bg-surface-2 text-fg hover:bg-surface-2'}">
                             ${persona.active ? 'Active' : 'Activate'}
                         </button>
                     </div>
-                    <p class="text-[11px] text-white/40 leading-relaxed">${escapeHtml(persona.description)}</p>
+                    <p class="text-[11px] text-muted leading-relaxed">${escapeHtml(persona.description)}</p>
                     <div class="flex flex-wrap gap-1">${skillTags}</div>
                 `;
                 const activateBtn = card.querySelector('.persona-activate');
@@ -1091,27 +1091,27 @@ export function SupercomputerStudio() {
         } else {
             listMarketplaceSkills().forEach((skill) => {
                 const row = document.createElement('div');
-                row.className = 'bg-white/5 border border-white/10 rounded-xl p-3 flex items-start justify-between gap-3';
+                row.className = 'bg-surface-2 border border-border-token rounded-xl p-3 flex items-start justify-between gap-3';
                 const builtinBadge = skill.builtin
-                    ? '<span class="text-[9px] uppercase tracking-widest text-white/30 font-bold">Built-in</span>'
+                    ? '<span class="text-[9px] uppercase tracking-widest text-muted font-bold">Built-in</span>'
                     : '';
                 row.innerHTML = `
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-primary font-bold text-xs">${escapeHtml(skill.trigger)}</span>
+                            <span class="text-accent font-bold text-xs">${escapeHtml(skill.trigger)}</span>
                             ${builtinBadge}
                         </div>
-                        <p class="text-[11px] text-white/50 mt-1 leading-relaxed">${escapeHtml(skill.description)}</p>
+                        <p class="text-[11px] text-muted mt-1 leading-relaxed">${escapeHtml(skill.description)}</p>
                     </div>
                     <button type="button" class="skill-toggle shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"></button>
                 `;
                 const toggleBtn = row.querySelector('.skill-toggle');
                 if (skill.builtin) {
                     toggleBtn.textContent = 'Built-in';
-                    toggleBtn.className += ' bg-white/5 text-white/30 cursor-default';
+                    toggleBtn.className += ' bg-surface-2 text-muted cursor-default';
                 } else if (skill.installed) {
                     toggleBtn.textContent = 'Installed';
-                    toggleBtn.className += ' bg-primary/20 text-primary border border-primary/30 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/30';
+                    toggleBtn.className += ' bg-accent/20 text-accent border border-accent/30 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/30';
                     toggleBtn.onclick = () => {
                         uninstallSkill(skill.trigger);
                         renderSkillsMenu();
@@ -1119,7 +1119,7 @@ export function SupercomputerStudio() {
                     };
                 } else {
                     toggleBtn.textContent = 'Install';
-                    toggleBtn.className += ' bg-white/10 text-white hover:bg-primary/20 hover:text-primary hover:border-primary/30';
+                    toggleBtn.className += ' bg-surface-2 text-fg hover:bg-accent/20 hover:text-accent hover:border-accent/30';
                     toggleBtn.onclick = () => {
                         installSkill(skill);
                         renderSkillsMenu();
@@ -1146,7 +1146,7 @@ export function SupercomputerStudio() {
     document.addEventListener('click', () => personaMenu.classList.add('hidden'));
 
     const brainSelect = document.createElement('select');
-    brainSelect.className = 'bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-primary/50 cursor-pointer';
+    brainSelect.className = 'bg-surface-2 border border-border-token rounded-xl px-3 py-2 text-fg text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-accent/50 cursor-pointer';
     brainSelect.title = 'Agent brain';
     for (const provider of PROVIDERS) {
         const option = document.createElement('option');
@@ -1162,7 +1162,7 @@ export function SupercomputerStudio() {
     };
 
     const sendBtn = document.createElement('button');
-    sendBtn.className = 'bg-primary text-black px-6 md:px-8 py-3 rounded-xl md:rounded-[1.25rem] font-black text-sm md:text-base hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100';
+    sendBtn.className = 'bg-accent text-accent-contrast px-6 md:px-8 py-3 rounded-xl md:rounded-[1.25rem] font-black text-sm md:text-fg hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100';
     sendBtn.textContent = 'Send';
 
     const setRunning = (value) => {

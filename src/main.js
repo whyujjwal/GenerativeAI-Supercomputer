@@ -1,6 +1,9 @@
 import './style.css';
+import { applyTheme, getTheme } from './lib/theme.js';
 import { Header } from './components/Header.js';
 import { ImageStudio } from './components/ImageStudio.js';
+
+applyTheme(getTheme());
 
 const app = document.querySelector('#app');
 let contentArea;

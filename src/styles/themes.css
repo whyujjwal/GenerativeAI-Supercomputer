@@ -1,0 +1,54 @@
+/* Theme tokens — RGB channels for Tailwind alpha support */
+
+:root,
+[data-theme="midnight"] {
+  --bg: 5 5 5;
+  --surface: 15 15 18;
+  --surface-2: 26 26 30;
+  --border: 39 39 42;
+  --text: 255 255 255;
+  --text-dim: 161 161 170;
+  --text-muted: 82 82 91;
+  --accent: 34 211 238;
+  --accent-contrast: 0 0 0;
+  --glow: 34 211 238;
+}
+
+[data-theme="light"] {
+  --bg: 250 250 250;
+  --surface: 255 255 255;
+  --surface-2: 244 244 245;
+  --border: 228 228 231;
+  --text: 24 24 27;
+  --text-dim: 82 82 91;
+  --text-muted: 113 113 122;
+  --accent: 99 102 241;
+  --accent-contrast: 255 255 255;
+  --glow: 99 102 241;
+}
+
+[data-theme="sunset"] {
+  --bg: 26 17 16;
+  --surface: 36 23 21;
+  --surface-2: 48 32 28;
+  --border: 90 65 55;
+  --text: 253 244 231;
+  --text-dim: 201 169 143;
+  --text-muted: 160 130 110;
+  --accent: 245 158 11;
+  --accent-contrast: 26 17 16;
+  --glow: 245 158 11;
+}
+
+[data-theme="mono"] {
+  --bg: 12 12 14;
+  --surface: 22 22 24;
+  --surface-2: 32 32 36;
+  --border: 50 50 56;
+  --text: 237 237 237;
+  --text-dim: 154 154 162;
+  --text-muted: 100 100 108;
+  --accent: 139 92 246;
+  --accent-contrast: 255 255 255;
+  --glow: 139 92 246;
+}

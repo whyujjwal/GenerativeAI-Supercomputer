@@ -1,5 +1,6 @@
 import { SettingsModal } from './SettingsModal.js';
 import { t, getLang, setLang } from '../lib/i18n.js';
+import { THEMES, applyTheme, getTheme, setTheme } from '../lib/theme.js';
 
 export function Header(navigate) {
     const header = document.createElement('header');
@@ -8,7 +9,7 @@ export function Header(navigate) {
 
     // 2. Main Navigation Bar
     const navBar = document.createElement('div');
-    navBar.className = 'w-full h-16 bg-black flex items-center justify-between px-4 md:px-6 border-b border-white/5 backdrop-blur-md bg-opacity-95';
+    navBar.className = 'w-full h-16 bg-bg flex items-center justify-between px-4 md:px-6 border-b border-border-token backdrop-blur-md bg-opacity-95';
 
     const leftPart = document.createElement('div');
     leftPart.className = 'flex items-center gap-8';
@@ -42,17 +43,17 @@ export function Header(navigate) {
     items.forEach(({ label, page }, idx) => {
         const link = document.createElement('a');
         link.textContent = label;
-        link.className = `hover:text-white transition-all cursor-pointer relative group ${idx === 0 ? 'text-white' : ''}`;
+        link.className = `hover:text-fg transition-all cursor-pointer relative group ${idx === 0 ? 'text-fg' : ''}`;
 
         if (idx === 0) {
             const dot = document.createElement('div');
-            dot.className = 'absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full';
+            dot.className = 'absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full';
             link.appendChild(dot);
         }
 
         link.onclick = () => {
-            Array.from(menu.children).forEach(child => child.classList.remove('text-white'));
-            link.classList.add('text-white');
+            Array.from(menu.children).forEach(child => child.classList.remove('text-fg'));
+            link.classList.add('text-fg');
             navigate(page);
         };
 
@@ -65,8 +66,23 @@ export function Header(navigate) {
     const rightPart = document.createElement('div');
     rightPart.className = 'flex items-center gap-4';
 
+    const themeSelect = document.createElement('select');
+    themeSelect.className = 'px-2 py-1.5 rounded-md border border-border-token bg-surface-2 text-[12px] font-bold text-dim hover:text-fg focus:outline-none focus:border-accent/50 cursor-pointer transition-colors';
+    themeSelect.title = 'Theme';
+    THEMES.forEach(({ id, name }) => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        themeSelect.appendChild(option);
+    });
+    themeSelect.value = getTheme();
+    themeSelect.onchange = () => {
+        setTheme(themeSelect.value);
+        applyTheme(themeSelect.value);
+    };
+
     const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/10 bg-white/5 text-[13px] font-bold text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors';
+    settingsBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-token bg-surface-2 text-[13px] font-bold text-dim hover:text-fg hover:bg-surface hover:border-border-token transition-colors';
     settingsBtn.title = 'Settings — API key, local models, preferences';
     settingsBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -82,11 +98,12 @@ export function Header(navigate) {
     // Language toggle button
     const langBtn = document.createElement('button');
     const currentLang = getLang();
-    langBtn.className = 'flex items-center px-3 py-1.5 rounded-md border border-white/10 bg-white/5 text-[13px] font-bold text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors';
+    langBtn.className = 'flex items-center px-3 py-1.5 rounded-md border border-border-token bg-surface-2 text-[13px] font-bold text-dim hover:text-fg hover:bg-surface hover:border-border-token transition-colors';
     langBtn.title = currentLang === 'zh' ? 'Switch to English' : '切换为中文';
     langBtn.textContent = currentLang === 'zh' ? 'EN' : '中文';
     langBtn.onclick = () => setLang(currentLang === 'zh' ? 'en' : 'zh');
 
+    rightPart.appendChild(themeSelect);
     rightPart.appendChild(langBtn);
     rightPart.appendChild(settingsBtn);
 
