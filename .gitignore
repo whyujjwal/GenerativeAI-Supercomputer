@@ -37,3 +37,7 @@ out/
 .env.*
 !.env.example
 .orchestration/
+
+# Connector backend (Phase 5a)
+server/.data
+server/.env
